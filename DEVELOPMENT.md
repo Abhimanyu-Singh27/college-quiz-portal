@@ -113,7 +113,7 @@ Each folder corresponds to a URL path:
 ### `/prisma/` - Database
 - `schema.prisma` - Database schema definition
 - `seed.ts` - Demo data seeding script
-- `dev.db` - SQLite database file (created after setup)
+- PostgreSQL database - configured through `DATABASE_URL`
 
 ---
 

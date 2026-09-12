@@ -317,7 +317,7 @@ Structure ready! Just integrate:
    - Prevent brute force attacks
 
 5. **Database Backups**
-   - Regular SQLite backups
+   - Managed PostgreSQL backups
    - Consider PostgreSQL for production
 
 6. **Session Security**

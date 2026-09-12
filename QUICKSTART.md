@@ -12,7 +12,7 @@ npm install
 npm run db:push
 ```
 
-This creates the SQLite database and initializes all tables.
+This synchronizes the configured PostgreSQL database and initializes all tables.
 
 ### Step 3: Seed Demo Data (Optional)
 ```bash

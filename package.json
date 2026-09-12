@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
+    "db:deploy": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "seed": "ts-node --compiler-options {\"module\":\"commonjs\"} prisma/seed.ts"
   },

@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -212,7 +212,6 @@ model QuizAttempt {
   createdAt      DateTime      @default(now())
   
   // Note: Either user or team should be set (enforced at application level)
-  // SQLite does not support check constraints
 }
 
 model QuizAnswer {

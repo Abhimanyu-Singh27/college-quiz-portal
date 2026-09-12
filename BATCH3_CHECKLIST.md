@@ -213,7 +213,7 @@ Before going live:
 ### Common Issues & Solutions:
 
 **Issue**: Database migration fails
-- Solution: Check `DATABASE_URL` in `.env.local`, ensure SQLite is accessible
+- Solution: Check `DATABASE_URL` in `.env.local`, ensure the PostgreSQL database is reachable
 
 **Issue**: Avatar not showing
 - Solution: Verify `avatarId` field is populated in database

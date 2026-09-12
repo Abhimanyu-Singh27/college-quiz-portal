@@ -1,6 +1,6 @@
 # QuizNexa - Smart College Quiz Technology
 
-A comprehensive, role-based college quiz portal built with Next.js, Prisma, and SQLite.
+A comprehensive, role-based college quiz portal built with Next.js, Prisma, and PostgreSQL.
 
 ## Features
 
@@ -45,7 +45,7 @@ A comprehensive, role-based college quiz portal built with Next.js, Prisma, and 
 
 - **Frontend**: Next.js 15, React 19, Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Database**: Prisma ORM with SQLite
+- **Database**: Prisma ORM with PostgreSQL
 - **Authentication**: JWT tokens
 - **Icons**: Lucide React
 
@@ -72,7 +72,7 @@ A comprehensive, role-based college quiz portal built with Next.js, Prisma, and 
    cp .env.example .env.local
    ```
 
-4. **Initialize database**
+4. **Initialize PostgreSQL database**
    ```bash
    npm run db:push
    ```
@@ -88,6 +88,10 @@ A comprehensive, role-based college quiz portal built with Next.js, Prisma, and 
    ```
 
    Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Production deployment
+
+Use a managed PostgreSQL provider such as Neon, Supabase, Railway, or Render PostgreSQL. Set `DATABASE_URL` to the provider's PostgreSQL connection string and set a strong random `JWT_SECRET`. Configure the host to run `npm ci && npm run build` during deployment and `npm run db:deploy && npm start` at runtime. The `db:deploy` command synchronizes a new empty database with the Prisma schema without changing application features. For a mature production workflow, create and review Prisma migrations with `npm run db:migrate`, then use `npm run db:migrate:deploy` for later releases.
 
 ## Initial Access
 
@@ -172,7 +176,7 @@ The first administrator chooses their own name, email, and password from the por
    - Set `secure: true` in cookie configuration
 
 4. **Database**
-   - Back up SQLite database regularly
+   - Use your PostgreSQL provider's automated backups and point-in-time recovery where available
    - Consider PostgreSQL for production
    - Implement database access controls
 

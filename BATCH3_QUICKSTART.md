@@ -210,7 +210,7 @@ Avatar displays as ✨
 ```
 **Solution**: Verify user has avatarId in database
 ```bash
-sqlite3 ./dev.db "SELECT id, email, avatarId FROM User WHERE email='student@college.edu';"
+npx prisma studio
 ```
 
 ## 📖 Documentation Files
