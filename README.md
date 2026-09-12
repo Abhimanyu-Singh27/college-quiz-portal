@@ -91,7 +91,7 @@ A comprehensive, role-based college quiz portal built with Next.js, Prisma, and 
 
 ### Production deployment
 
-Use a managed PostgreSQL provider such as Neon, Supabase, Railway, or Render PostgreSQL. Set `DATABASE_URL` to the provider's PostgreSQL connection string and set a strong random `JWT_SECRET`. Configure the host to run `npm ci && npm run build` during deployment and `npm run db:deploy && npm start` at runtime. The `db:deploy` command synchronizes a new empty database with the Prisma schema without changing application features. For a mature production workflow, create and review Prisma migrations with `npm run db:migrate`, then use `npm run db:migrate:deploy` for later releases.
+Use a managed PostgreSQL provider such as Neon, Supabase, Railway, or Render PostgreSQL. Set `DATABASE_URL` to the provider's PostgreSQL connection string and set a strong random `JWT_SECRET`. Configure the host to run `npm ci --include=dev && npm run build` during deployment and `npm start` at runtime. Build tools such as Tailwind CSS and Prisma are development dependencies, so the install command must include them even when `NODE_ENV=production`. The database schema should be synchronized separately with `npm run db:deploy` before the first release. For a mature production workflow, create and review Prisma migrations with `npm run db:migrate`, then use `npm run db:migrate:deploy` for later releases.
 
 ## Initial Access
 
