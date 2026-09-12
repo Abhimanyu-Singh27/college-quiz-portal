@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+    overscroll-behavior-y: contain;
+}
+
+@keyframes funQuizFloat {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(-0.4deg);
+    }
+
+    50% {
+        transform: translateY(-8px) rotate(0.4deg);
+    }
+}
+
+.fun-quiz-option {
+    animation: funQuizFloat 3.2s ease-in-out infinite;
+    will-change: transform;
+}
+
+.fun-quiz-option:nth-child(even) {
+    animation-duration: 3.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fun-quiz-option {
+        animation: none;
+    }
+}
+
+@layer base {
+
+    button,
+    a {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    button:not(:disabled),
+    a {
+        transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+
+    button:not(:disabled):active,
+    a:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: inset 0 0 0 2px rgb(15 23 42 / 0.22);
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+        outline: 3px solid rgb(15 23 42 / 0.45);
+        outline-offset: 3px;
+    }
+}

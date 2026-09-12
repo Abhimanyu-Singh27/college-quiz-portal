@@ -1,0 +1,369 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  CONTROLLER
+  STUDENT
+}
+
+enum QuizType {
+  INDIVIDUAL
+  TEAM
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum QuizRuntimeStatus {
+  READY
+  RUNNING
+  PAUSED
+  STOPPED
+  COMPLETED
+}
+
+enum QuizVisitStatus {
+  JOINED
+  ENTERED
+  COMPLETED
+  LEFT_EARLY
+}
+
+enum QuizPresentationMode {
+  NORMAL
+  FUN
+}
+
+model User {
+  id                String          @id @default(cuid())
+  email             String          @unique
+  quiznexaId        String?         @unique
+  name              String
+  password          String?
+  role              Role            @default(STUDENT)
+  department        String          @default("Computer Science")
+  
+  // Avatar for students
+  avatarId          String?
+  avatar            Avatar?         @relation(fields: [avatarId], references: [id])
+  
+  // Controller verification
+  isControllerVerified Boolean      @default(false)
+  controllerVerifiedAt DateTime?
+  controllerVerifiedBy String?
+  
+  // Admin/Controller relations
+  createdQuizzes    Quiz[]          @relation("QuizCreator")
+  assignedTasks     Task[]          @relation("TaskAssignee")
+  verifiedControllers User[]        @relation("AdminVerifies")
+  
+  // Controller relations (assigned by admin)
+  assignedByAdmin   User?           @relation("AdminToController", fields: [assignedByAdminId], references: [id])
+  assignedByAdminId String?
+  managedControllers User[]         @relation("AdminToController")
+  verifyingAdmin    User?           @relation("AdminVerifies", fields: [controllerVerifiedBy], references: [id])
+  
+  // Student relations
+  attempts          QuizAttempt[]
+  teamMemberships   TeamMember[]
+  
+  // Session management
+  activeSessions    ActiveSession[] @relation("ActiveSessions")
+  
+  // Audit trail
+  auditLogs         AuditLog[]
+  ratings           ControllerRating[]
+  controllerPermissions ControllerPermission[] @relation("ControllerPermissions")
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Avatar {
+  id            String   @id @default(cuid())
+  name          String
+  emoji         String   // Emoji or icon character
+  color         String   // Hex color for avatar background
+  description   String?
+  users         User[]
+  
+  createdAt     DateTime @default(now())
+}
+
+model Quiz {
+  id                String          @id @default(cuid())
+  title             String
+  description       String?
+  department        String
+  durationMinutes   Int             @default(60)
+  totalQuestions    Int             @default(0)  // Number of questions in quiz
+  maxViolations     Int             @default(3)
+  quizType          QuizType        @default(INDIVIDUAL)
+  allowIndividualInTeam Boolean     @default(false)
+  presentationMode  QuizPresentationMode @default(NORMAL)
+  teamSize          Int?            // Required if quizType is TEAM
+  isActive          Boolean         @default(true)
+  runtimeStatus     QuizRuntimeStatus @default(READY)
+  stoppedAt         DateTime?
+  stoppedById       String?
+  leaderboardLimit  Int             @default(3)
+  leaderboardScope  String          @default("BOTH")
+  medalConfigJson   String          @default("[{\"name\":\"Diamond\",\"priority\":4,\"color\":\"#38bdf8\"},{\"name\":\"Gold\",\"priority\":3,\"color\":\"#f59e0b\"},{\"name\":\"Silver\",\"priority\":2,\"color\":\"#94a3b8\"},{\"name\":\"Bronze\",\"priority\":1,\"color\":\"#b45309\"}]")
+  
+  // After every N questions, display interim results
+  resultsDisplayInterval Int        @default(0)  // 0 = no interim results, only final
+  
+  createdById       String
+  createdBy         User            @relation("QuizCreator", fields: [createdById], references: [id])
+  
+  questions         Question[]
+  attempts          QuizAttempt[]
+  teams             Team[]
+  accessLinks       QuizLink[] @relation("QuizLinks")
+  visits            QuizVisit[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Question {
+  id            String        @id @default(cuid())
+  quizId        String
+  quiz          Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text          String        // Question text
+  options       String        // JSON array of options: ["A", "B", "C", "D"]
+  correctAnswer String        // Correct option text
+  marks         Float         @default(1.0)
+  negativeMarks Float         @default(0.0)
+  questionType  String        @default("MCQ")
+  
+  answers       QuizAnswer[]  // Individual answers to this question
+  
+  createdAt     DateTime      @default(now())
+}
+
+model Team {
+  id            String        @id @default(cuid())
+  quizId        String
+  quiz          Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  name          String
+  teamSize      Int
+  isRemoved     Boolean  @default(false)
+  removedAt     DateTime?
+  removedById   String?
+  members       TeamMember[]
+  attempts      QuizAttempt[]
+  
+  createdAt     DateTime      @default(now())
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([teamId, userId])
+}
+
+model QuizAttempt {
+  id             String        @id @default(cuid())
+  quizId         String
+  quiz           Quiz          @relation(fields: [quizId], references: [id])
+  
+  // Either user or team, not both
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  teamId         String?
+  team           Team?         @relation(fields: [teamId], references: [id])
+  
+  // Individual answers
+  answers        QuizAnswer[]
+  
+  // Overall attempt stats
+  score          Float         @default(0.0)
+  violations     Int           @default(0)
+  isDisqualified Boolean       @default(false)
+  isRemoved      Boolean       @default(false)
+  removedAt      DateTime?
+  removedById    String?
+  
+  // Speed metrics
+  totalTimeSeconds Int         @default(0)
+  questionsAnswered Int        @default(0)
+  averageTimePerQuestion Int   @default(0)  // In seconds
+  
+  startedAt      DateTime      @default(now())
+  submittedAt    DateTime?
+  
+  createdAt      DateTime      @default(now())
+  
+  // Note: Either user or team should be set (enforced at application level)
+  // SQLite does not support check constraints
+}
+
+model QuizAnswer {
+  id             String        @id @default(cuid())
+  attemptId      String
+  attempt        QuizAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  
+  questionId     String
+  question       Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  answer         String        // Selected answer text
+  timeSeconds    Int           @default(0)  // Time taken for this question
+  isCorrect      Boolean       @default(false)
+  
+  createdAt      DateTime      @default(now())
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+model QuizVisit {
+  id          String          @id @default(cuid())
+  quizId      String
+  quiz        Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId      String?
+  name        String
+  email       String?
+  status      QuizVisitStatus @default(JOINED)
+  joinedAt    DateTime        @default(now())
+  enteredAt   DateTime?
+  leftAt      DateTime?
+  completedAt DateTime?
+
+  @@index([quizId, status])
+}
+
+model Task {
+  id            String      @id @default(cuid())
+  title         String
+  description   String?
+  
+  assignedToId  String
+  assignedTo    User        @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  
+  relatedQuizId String?
+  status        TaskStatus  @default(PENDING)
+  dueDate       DateTime?
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  action    String
+  details   String
+  targetId  String?
+  undoData  String?
+  undoneAt  DateTime?
+  timestamp DateTime @default(now())
+}
+
+model ControllerRating {
+  id           String   @id @default(cuid())
+  controllerId String
+  controller   User     @relation(fields: [controllerId], references: [id], onDelete: Cascade)
+  ratedById    String
+  rating       Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([controllerId, ratedById])
+  @@index([controllerId])
+}
+
+model ControllerPermission {
+  id           String   @id @default(cuid())
+  controllerId String
+  controller   User     @relation("ControllerPermissions", fields: [controllerId], references: [id], onDelete: Cascade)
+  quizId       String?
+  feature      String
+  isGranted    Boolean  @default(true)
+  grantedById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([controllerId, quizId, feature])
+  @@index([controllerId, quizId])
+}
+
+// Session configuration and management
+model SessionConfig {
+  id                        String   @id @default(cuid())
+  // Role-based concurrent session limits
+  maxConcurrentAdmins       Int      @default(1)     // Only 1 admin at a time
+  maxConcurrentControllers  Int      @default(2)     // Configure number of controllers
+  controllersConfigured     Boolean  @default(false)
+  maxConcurrentStudents     Int      @default(999)   // Unlimited students (per quiz)
+  
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+// Track active login sessions
+model ActiveSession {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation("ActiveSessions", fields: [userId], references: [id], onDelete: Cascade)
+  role              Role
+  
+  // Session metadata
+  sessionToken      String   @unique
+  ipAddress         String?
+  userAgent         String?
+  
+  loginAt           DateTime @default(now())
+  expiresAt         DateTime // When session expires
+  logoutAt          DateTime?
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([userId, role])
+}
+
+// Quiz access links and QR codes
+model QuizLink {
+  id                String   @id @default(cuid())
+  quizId            String
+  quiz              Quiz     @relation("QuizLinks", fields: [quizId], references: [id], onDelete: Cascade)
+  
+  // Unique access token
+  accessToken       String   @unique
+  
+  // For sharing
+  qrCodeData        String?  // QR code as data URL or base64
+  shareLink         String   @unique // Full URL for sharing
+  
+  // Access control
+  maxStudents       Int?     // null = unlimited
+  currentStudents   Int      @default(0)
+  
+  // Status
+  isActive          Boolean  @default(true)
+  expiresAt         DateTime? // When link expires (usually when quiz ends)
+  
+  // Tracking
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([quizId])
+}
