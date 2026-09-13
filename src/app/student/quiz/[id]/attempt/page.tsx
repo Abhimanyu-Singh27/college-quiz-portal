@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Loader, Clock, Zap, Users, Volume2, Check, AlertCircle } from "lucide-react";
 
@@ -39,6 +39,7 @@ interface ProgressMetrics {
 export default function QuizAttemptPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const quizId = params.id as string;
 
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -55,6 +56,8 @@ export default function QuizAttemptPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [waitingForResume, setWaitingForResume] = useState(false);
   const [quizReady, setQuizReady] = useState(false);
+  const [runtimeStatus, setRuntimeStatus] = useState<"READY" | "RUNNING" | "PAUSED" | "STOPPED" | "COMPLETED">("READY");
+  const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
   const [waitingForTeam, setWaitingForTeam] = useState(false);
   const [teamMembersJoined, setTeamMembersJoined] = useState(0);
   const [teamSize, setTeamSize] = useState(0);
@@ -98,6 +101,7 @@ export default function QuizAttemptPage() {
 
         setWaitingForResume(false);
         setWaitingForTeam(false);
+        setRuntimeStatus("RUNNING");
         setAttempt(attemptData.attempt);
         setQuestions(attemptData.questions);
         if (attemptData.questions.length > 0) {
@@ -124,22 +128,55 @@ export default function QuizAttemptPage() {
   }, [startQuiz, waitingForTeam]);
 
   useEffect(() => {
-    if (!waitingForResume || quizReady) return;
+    let cancelled = false;
     const checkQuizStatus = async () => {
       const response = await fetch(`/api/quizzes/${quizId}`, { cache: "no-store" });
       if (!response.ok) return;
       const quiz = await response.json();
-      if (quiz.isActive && ["READY", "RUNNING"].includes(quiz.runtimeStatus)) setQuizReady(true);
+      if (cancelled) return;
+      setRuntimeStatus(quiz.runtimeStatus);
+      if (["PAUSED", "STOPPED", "COMPLETED"].includes(quiz.runtimeStatus)) {
+        setWaitingForResume(true);
+        setQuizReady(false);
+        setResumeCountdown(null);
+        return;
+      }
+      if (waitingForResume && quiz.isActive && ["READY", "RUNNING"].includes(quiz.runtimeStatus)) setQuizReady(true);
     };
     void checkQuizStatus();
     const retry = window.setInterval(checkQuizStatus, 2000);
-    return () => window.clearInterval(retry);
-  }, [quizId, waitingForResume, quizReady]);
+    return () => {
+      cancelled = true;
+      window.clearInterval(retry);
+    };
+  }, [quizId, waitingForResume]);
+
+  useEffect(() => {
+    if (!waitingForResume || !quizReady || resumeCountdown !== null) return;
+    setResumeCountdown(5);
+    const countdown = window.setInterval(() => {
+      setResumeCountdown((seconds) => {
+        if (seconds === null || seconds <= 1) {
+          window.clearInterval(countdown);
+          if (attempt) {
+            setWaitingForResume(false);
+            setQuizReady(false);
+            setRuntimeStatus("RUNNING");
+            return null;
+          }
+          void startQuiz();
+          return null;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(countdown);
+  }, [attempt, quizReady, resumeCountdown, startQuiz, waitingForResume]);
 
   // Timer effect
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeElapsed((prev) => prev + 1);
+      if (attempt && !waitingForResume && runtimeStatus === "RUNNING") setTimeElapsed((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -190,7 +227,7 @@ export default function QuizAttemptPage() {
   }, [showResults, progress, questions, attempt, quizId, router]);
 
   const handleAnswerSubmit = async () => {
-    if (!selectedAnswer || !currentQuestion || !attempt) return;
+    if (!selectedAnswer || !currentQuestion || !attempt || waitingForResume || runtimeStatus !== "RUNNING") return;
 
     setIsSaving(true);
     const timeSpent = (Date.now() - questionStartTime) / 1000;
@@ -248,7 +285,7 @@ export default function QuizAttemptPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <Navbar user={null} />
+        <Navbar user={null} studentMode studentQuizId={quizId} studentVisitId={searchParams.get("visitId") || undefined} />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
@@ -259,22 +296,18 @@ export default function QuizAttemptPage() {
     );
   }
 
-  if (!attempt || !currentQuestion) {
+  if (!attempt || !currentQuestion || waitingForResume) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <Navbar user={null} />
+        <Navbar user={null} studentMode studentQuizId={quizId} studentVisitId={searchParams.get("visitId") || undefined} />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="max-w-lg px-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <p className="text-slate-600">
-              {waitingForTeam ? `${teamMembersJoined} of ${teamSize} team members have joined. Waiting for the remaining members to start the quiz.` : waitingForResume && quizReady ? "The quiz has resumed. Click Start Quiz to begin." : error || "Quiz not found"}
+              {waitingForTeam ? `${teamMembersJoined} of ${teamSize} team members have joined. Waiting for the remaining members to start the quiz.` : runtimeStatus === "STOPPED" || runtimeStatus === "COMPLETED" ? "This quiz has been stopped. You can no longer continue." : waitingForResume && quizReady ? `The quiz has resumed. Starting in ${resumeCountdown ?? 5} seconds...` : error || "Quiz not found"}
             </p>
             {waitingForTeam && <div className="mx-auto mt-6 h-3 w-full max-w-sm overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${teamSize ? (teamMembersJoined / teamSize) * 100 : 0}%` }} /></div>}
-            {waitingForResume && quizReady && (
-              <button type="button" onClick={() => startQuiz()} disabled={isLoading} className="mt-6 rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60">
-                {isLoading ? "Starting..." : "Start Quiz"}
-              </button>
-            )}
+            {waitingForResume && runtimeStatus === "PAUSED" && <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">The quiz is paused. Waiting for the administrator or controller to resume it.</p>}
           </div>
         </div>
       </div>
@@ -299,7 +332,7 @@ export default function QuizAttemptPage() {
           </div>
         </div>
       )}
-      <Navbar user={null} />
+      <Navbar user={null} studentMode studentQuizId={quizId} studentVisitId={searchParams.get("visitId") || undefined} />
 
       <main className={`max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 ${isFunMode ? "pb-40" : ""}`}>
         {/* Header */}
@@ -347,7 +380,7 @@ export default function QuizAttemptPage() {
                     <button
                       key={option.id}
                       onClick={() => setSelectedAnswer(option.id)}
-                      disabled={isSaving}
+                      disabled={isSaving || waitingForResume || runtimeStatus !== "RUNNING"}
                       className={`w-full min-h-14 p-3 sm:p-4 text-left rounded-lg border-2 transition touch-manipulation ${
                         selectedAnswer === option.id
                           ? "border-blue-500 bg-blue-50"
@@ -378,7 +411,7 @@ export default function QuizAttemptPage() {
               {/* Submit Button */}
               <button
                 onClick={handleAnswerSubmit}
-                disabled={!selectedAnswer || isSaving}
+                disabled={!selectedAnswer || isSaving || waitingForResume || runtimeStatus !== "RUNNING"}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
               >
                 {isSaving && <Loader className="w-5 h-5 animate-spin" />}

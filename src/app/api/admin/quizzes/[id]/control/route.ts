@@ -11,6 +11,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     where: { id },
     select: {
       id: true, title: true, runtimeStatus: true, isActive: true, quizType: true,
+      visits: { select: { id: true, name: true, status: true, joinedAt: true }, orderBy: { joinedAt: "asc" } },
       teams: { include: { members: { include: { user: { select: { id: true, name: true, email: true } } } }, attempts: true } },
       attempts: { include: { user: { select: { id: true, name: true, email: true } }, team: { select: { id: true, name: true } } }, orderBy: { score: "desc" } },
     },

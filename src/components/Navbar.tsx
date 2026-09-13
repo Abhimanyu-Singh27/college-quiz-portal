@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ShieldCheck, BookOpen, UserCheck, LogOut, X } from "lucide-react";
+import { ShieldCheck, BookOpen, UserCheck, X, DoorOpen } from "lucide-react";
 
 interface NavbarProps {
   user: {
@@ -12,21 +11,24 @@ interface NavbarProps {
     quiznexaId?: string;
     department?: string;
   } | null;
+  studentMode?: boolean;
+  studentQuizId?: string;
+  studentVisitId?: string;
 }
 
-export function Navbar({ user }: NavbarProps) {
-  const router = useRouter();
+export function Navbar({ user, studentMode = false, studentQuizId, studentVisitId }: NavbarProps) {
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const isStudent = studentMode || user?.role === "STUDENT";
 
-  const handleLogout = async () => {
+  const handleLeaveQuiz = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      sessionStorage.removeItem("quiznexa_tab_role");
-      window.location.replace("/");
+      if (studentQuizId) {
+        await fetch(`/api/quizzes/${studentQuizId}/leave`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitId: studentVisitId }) });
+      }
+      window.location.replace("/student/left");
     } catch (error) {
-      console.error("Logout failed:", error);
-      sessionStorage.removeItem("quiznexa_tab_role");
-      window.location.replace("/");
+      console.error("Leave quiz failed:", error);
+      window.location.replace("/student/left");
     }
   };
 
@@ -55,24 +57,21 @@ export function Navbar({ user }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          {user?.role === "STUDENT" ? (
+          {isStudent ? (
             <>
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-slate-800">{user.name}</p>
-                <p className="text-xs text-slate-500">{user.role}{user.quiznexaId ? ` · ${user.quiznexaId}` : ""}</p>
-              </div>
               <button
                 onClick={() => setConfirmLogout(true)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition text-slate-600 hover:text-red-600"
-                title="Logout"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-red-700"
+                title="Leave quiz"
               >
-                <LogOut className="w-5 h-5" />
+                <DoorOpen className="w-5 h-5" />
+                <span>Leave quiz</span>
               </button>
               {confirmLogout && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true">
                   <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-                    <div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-slate-900">Sign out?</h2><p className="mt-2 text-sm text-slate-600">Your active session will end and the access slot will become available.</p></div><button onClick={() => setConfirmLogout(false)} className="text-slate-400 hover:text-slate-700" aria-label="Cancel"><X size={18} /></button></div>
-                    <div className="mt-6 flex justify-end gap-2"><button onClick={() => setConfirmLogout(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700">Cancel</button><button onClick={handleLogout} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Sign out</button></div>
+                    <div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-slate-900">Leave quiz?</h2><p className="mt-2 text-sm text-slate-600">Your participation will be marked as left early.</p></div><button onClick={() => setConfirmLogout(false)} className="text-slate-400 hover:text-slate-700" aria-label="Cancel"><X size={18} /></button></div>
+                    <div className="mt-6 flex justify-end gap-2"><button onClick={() => setConfirmLogout(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700">Stay</button><button onClick={handleLeaveQuiz} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Leave quiz</button></div>
                   </div>
                 </div>
               )}

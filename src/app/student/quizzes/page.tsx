@@ -7,15 +7,11 @@ import { BookOpen, Users, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 export default async function StudentQuizzesPage() {
   const session = await getStudentSession();
 
-  // Redirect if not student
   if (!session || session.role !== "STUDENT") {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-slate-600 mb-4">Access denied. Please login as a student.</p>
-          <Link href="/" className="text-blue-600 hover:text-blue-700 font-medium">
-            Go to Login
-          </Link>
+          <p className="text-slate-600">This temporary quiz session is no longer available.</p>
         </div>
       </div>
     );

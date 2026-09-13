@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 
@@ -10,6 +10,7 @@ interface Quiz {
   title: string;
   quizType: string;
   teamSize: number | null;
+  runtimeStatus: "READY" | "RUNNING" | "PAUSED" | "STOPPED" | "COMPLETED";
 }
 
 export default function StudentQuizEntryPage() {
@@ -22,15 +23,22 @@ export default function StudentQuizEntryPage() {
   const [isTeam, setIsTeam] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+  const previousStatus = useRef<Quiz["runtimeStatus"] | null>(null);
 
   useEffect(() => {
     // Fetch quiz details
+    let cancelled = false;
+    let timer: number | undefined;
     const fetchQuiz = async () => {
       try {
-        const response = await fetch(`/api/quizzes/${quizId}`);
+        const response = await fetch(`/api/quizzes/${quizId}?sync=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) throw new Error("Quiz not found");
         const data = await response.json();
         setQuiz(data);
+        if (previousStatus.current === "PAUSED" && ["READY", "RUNNING"].includes(data.runtimeStatus)) setResumeCountdown(5);
+        if (data.runtimeStatus === "PAUSED") setResumeCountdown(null);
+        previousStatus.current = data.runtimeStatus;
         const requestedMode = new URLSearchParams(window.location.search).get("mode");
         setIsTeam(data.quizType === "TEAM" && requestedMode !== "individual");
       } catch (err) {
@@ -38,11 +46,34 @@ export default function StudentQuizEntryPage() {
       }
     };
 
-    fetchQuiz();
+    void fetchQuiz();
+    timer = window.setInterval(() => {
+      if (!cancelled && document.visibilityState === "visible") void fetchQuiz();
+    }, 2000);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+    };
   }, [quizId]);
 
-  const handleStart = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (resumeCountdown === null) return;
+    const timer = window.setInterval(() => {
+      setResumeCountdown((seconds) => {
+        if (seconds === null || seconds <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resumeCountdown]);
+
+  const handleStart = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    if (quiz?.runtimeStatus === "PAUSED" || quiz?.runtimeStatus === "STOPPED" || (resumeCountdown !== null && resumeCountdown !== 0)) return;
 
     if (isTeam && !teamName.trim()) {
       setError("Team name is required for team quizzes");
@@ -67,6 +98,12 @@ export default function StudentQuizEntryPage() {
     }
   };
 
+  useEffect(() => {
+    if (resumeCountdown !== 0) return;
+    setResumeCountdown(null);
+    if (quiz?.runtimeStatus === "RUNNING") void handleStart();
+  }, [quiz?.runtimeStatus, resumeCountdown]);
+
   if (!quiz) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -78,9 +115,9 @@ export default function StudentQuizEntryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link href="/student/quizzes" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8">
+        <Link href="/student/left" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8">
           <ArrowLeft className="w-4 h-4" />
-          Back to Quizzes
+          Leave quiz
         </Link>
 
         <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
@@ -100,6 +137,8 @@ export default function StudentQuizEntryPage() {
             )}
 
             {/* Quiz Type Info */}
+            {quiz.runtimeStatus === "PAUSED" && <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center text-amber-800">This quiz is paused by the administrator or controller. Waiting for resume.</div>}
+            {resumeCountdown !== null && <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center text-emerald-800">Quiz resumed. Starting in {resumeCountdown} seconds...</div>}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
                 <span className="font-semibold">Quiz Type: </span>
@@ -180,7 +219,7 @@ export default function StudentQuizEntryPage() {
             {/* Start Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || quiz.runtimeStatus === "PAUSED" || quiz.runtimeStatus === "STOPPED" || resumeCountdown !== null}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Starting Quiz..." : "Start Quiz Now"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
@@ -14,6 +14,7 @@ interface QuizInfo {
   quizType: string;
   teamSize: number | null;
   allowIndividualInTeam: boolean;
+  runtimeStatus: "READY" | "RUNNING" | "PAUSED" | "STOPPED" | "COMPLETED";
 }
 
 export default function JoinQuizPage({
@@ -29,38 +30,70 @@ export default function JoinQuizPage({
   const [canJoin, setCanJoin] = useState(false);
   const [alreadyAttempted, setAlreadyAttempted] = useState(false);
   const [studentName, setStudentName] = useState("");
+  const [runtimeStatus, setRuntimeStatus] = useState<QuizInfo["runtimeStatus"]>("READY");
+  const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+  const previousStatus = useRef<QuizInfo["runtimeStatus"] | null>(null);
 
   useEffect(() => {
-    const validateLink = async () => {
+    const validateLink = async (accessToken: string, initial = false) => {
       try {
-        const { accessToken } = await params;
         const response = await fetch(
-          `/api/quizzes/join/${accessToken}`,
-          { method: "GET" }
+          `/api/quizzes/join/${accessToken}?sync=${Date.now()}`,
+          { method: "GET", cache: "no-store" }
         );
 
         if (!response.ok) {
           const data = await response.json();
-          setError(data.error || "Invalid or expired quiz link");
+          if (initial) setError(data.error || "Invalid or expired quiz link");
           return;
         }
 
         const data = await response.json();
         setQuiz(data.quiz);
+        setRuntimeStatus(data.quiz.runtimeStatus);
+        if (previousStatus.current === "PAUSED" && ["READY", "RUNNING"].includes(data.quiz.runtimeStatus)) setResumeCountdown(5);
+        if (data.quiz.runtimeStatus === "PAUSED") setResumeCountdown(null);
+        previousStatus.current = data.quiz.runtimeStatus;
         setCanJoin(data.canJoin);
         setAlreadyAttempted(data.alreadyAttempted);
       } catch (err) {
-        setError("Failed to validate quiz link");
+        if (initial) setError("Failed to validate quiz link");
       } finally {
-        setLoading(false);
+        if (initial) setLoading(false);
       }
     };
 
-    validateLink();
+    let cancelled = false;
+    let timer: number | undefined;
+    params.then(({ accessToken }) => {
+      void validateLink(accessToken, true);
+      timer = window.setInterval(() => {
+        if (!cancelled && document.visibilityState === "visible") void validateLink(accessToken);
+      }, 2000);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+    };
   }, [params]);
+
+  useEffect(() => {
+    if (resumeCountdown === null) return;
+    const timer = window.setInterval(() => {
+      setResumeCountdown((seconds) => {
+        if (seconds === null || seconds <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resumeCountdown]);
 
   const handleJoinQuiz = async () => {
     try {
+      if (runtimeStatus === "PAUSED" || runtimeStatus === "STOPPED" || (resumeCountdown !== null && resumeCountdown !== 0)) return;
       setJoining(true);
       const { accessToken } = await params;
       const response = await fetch(
@@ -83,6 +116,12 @@ export default function JoinQuizPage({
       setJoining(false);
     }
   };
+
+  useEffect(() => {
+    if (resumeCountdown !== 0) return;
+    setResumeCountdown(null);
+    if (studentName.trim() && runtimeStatus === "RUNNING") void handleJoinQuiz();
+  }, [resumeCountdown, runtimeStatus, studentName]);
 
   const leaveQuiz = async () => {
     const visitId = new URLSearchParams(window.location.search).get("visitId");
@@ -117,7 +156,7 @@ export default function JoinQuizPage({
                   href="/student/quizzes"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
                 >
-                  Back to Dashboard
+                  Leave quiz
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -141,7 +180,7 @@ export default function JoinQuizPage({
                   href="/student/quizzes"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
                 >
-                  View Results
+                  Leave quiz
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -157,6 +196,8 @@ export default function JoinQuizPage({
 
             {/* Quiz Details */}
             <div className="p-8">
+              {runtimeStatus === "PAUSED" && <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-amber-800">This quiz is paused by the administrator or controller. Waiting for resume.</div>}
+              {resumeCountdown !== null && <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-center text-emerald-800">Quiz resumed. Starting in {resumeCountdown} seconds...</div>}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-200">
                   <p className="text-indigo-600 font-semibold text-sm mb-1">
@@ -210,7 +251,7 @@ export default function JoinQuizPage({
               {/* Join Button */}
               <button
                 onClick={handleJoinQuiz}
-                disabled={joining}
+                disabled={joining || runtimeStatus === "PAUSED" || runtimeStatus === "STOPPED" || resumeCountdown !== null}
                 className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {joining ? (
@@ -227,7 +268,7 @@ export default function JoinQuizPage({
               </button>
 
               <Link
-                href="/student/quizzes"
+                href="/student/left"
                 onClick={(event) => { event.preventDefault(); void leaveQuiz(); }}
                 className="block text-center mt-4 text-gray-600 hover:text-gray-900 font-medium"
               >

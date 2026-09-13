@@ -129,8 +129,8 @@ export default function LoginPage() {
 
   const currentRoleInfo = sessionInfo?.[role.toLowerCase() as "admin" | "controller"];
   const adminIsActive = Boolean(sessionInfo?.admin.currentCount);
-  const showRoleTabs = adminIsActive;
-  const controllerTabAvailable = adminIsActive && Boolean(sessionInfo?.controllersConfigured);
+  const showRoleTabs = true;
+  const controllerTabAvailable = true;
   const controllerAssigned = Boolean(sessionInfo?.assignedControllers);
   const adminIsAvailable = true;
   const roleHasAccess = role === "ADMIN" || (controllerTabAvailable && controllerAssigned);

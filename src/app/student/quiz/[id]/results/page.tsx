@@ -88,7 +88,7 @@ export default async function QuizResultsPage({ searchParams }: ResultsPageProps
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <Navbar user={session} />
+      <Navbar user={session} studentQuizId={attempt.quiz.id} />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Main Results Card */}
@@ -239,7 +239,7 @@ export default async function QuizResultsPage({ searchParams }: ResultsPageProps
           </p>
         </div>
       </main>
-      <script dangerouslySetInnerHTML={{ __html: `setTimeout(async function () { await fetch('/api/auth/student-logout', { method: 'POST' }); window.location.replace('/'); }, 15000);` }} />
+      <script dangerouslySetInnerHTML={{ __html: `setTimeout(async function () { await fetch('/api/auth/student-logout', { method: 'POST' }); window.location.replace('/student/left'); }, 15000);` }} />
     </div>
   );
 }
