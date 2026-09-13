@@ -114,7 +114,6 @@ model Quiz {
   teamSize          Int?            // Required if quizType is TEAM
   isActive          Boolean         @default(true)
   runtimeStatus     QuizRuntimeStatus @default(READY)
-  runtimeStartedAt  DateTime?
   stoppedAt         DateTime?
   stoppedById       String?
   leaderboardLimit  Int             @default(3)

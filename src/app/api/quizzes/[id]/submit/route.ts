@@ -28,7 +28,7 @@ export async function POST(
         team: {
           include: { members: { select: { userId: true } } },
         },
-        quiz: { select: { id: true, totalQuestions: true, runtimeStatus: true, runtimeStartedAt: true, createdAt: true, durationMinutes: true } },
+        quiz: { select: { id: true, totalQuestions: true, runtimeStatus: true, updatedAt: true, durationMinutes: true } },
       },
     });
 

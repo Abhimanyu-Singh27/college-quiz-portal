@@ -70,7 +70,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         data: { status: "ENTERED", enteredAt: new Date() },
       });
     }
-    await prisma.quiz.updateMany({ where: { id: quizId, runtimeStatus: "READY" }, data: { runtimeStatus: "RUNNING", runtimeStartedAt: new Date() } });
+    await prisma.quiz.updateMany({ where: { id: quizId, runtimeStatus: "READY" }, data: { runtimeStatus: "RUNNING" } });
     return NextResponse.json({
       attempt: { id: attempt.id, quiz: { title: quiz.title, totalQuestions: quiz.totalQuestions, duration: quiz.durationMinutes, type: quiz.quizType, presentationMode: quiz.presentationMode } },
       attemptId: attempt.id,
