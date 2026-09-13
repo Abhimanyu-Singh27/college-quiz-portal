@@ -23,6 +23,7 @@ async function checkSessionAvailability(role: "ADMIN" | "CONTROLLER" | "STUDENT"
       role,
       logoutAt: null,
       OR: [{ role: { not: "STUDENT" } }, { expiresAt: { gt: new Date() } }],
+      ...(role === "CONTROLLER" ? { user: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false } } : {}),
     },
   });
 
@@ -153,7 +154,10 @@ export async function POST(req: Request) {
 
       // Check session availability
       const availability = await checkSessionAvailability(role);
-      if (!availability.isAvailable && role !== "ADMIN") {
+      const existingControllerSession = role === "CONTROLLER"
+        ? await prisma.activeSession.findFirst({ where: { userId: user.id, role: "CONTROLLER", logoutAt: null }, select: { id: true } })
+        : null;
+      if (!availability.isAvailable && role !== "ADMIN" && !existingControllerSession) {
         return NextResponse.json({
           error: `Maximum ${role.toLowerCase()} sessions (${availability.maxLimit}) already in use. Please try again later.`,
           status: "SESSION_LIMIT_EXCEEDED",

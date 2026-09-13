@@ -20,13 +20,26 @@ export async function POST(req: Request) {
       where: { quiznexaId: normalizedQuizNexaId },
     });
 
-    if (existingUser) {
+    if (existingUser && !existingUser.controllerRemoved) {
       return NextResponse.json({ error: "QuizNexa ID already registered" }, { status: 409 });
     }
 
-    // Create new controller
-    const controller = await prisma.user.create({
-      data: {
+    const controller = existingUser
+      ? await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name,
+          password,
+          role: "CONTROLLER",
+          department: "Academic",
+          isControllerVerified: true,
+          controllerRemoved: false,
+          controllerVerifiedAt: new Date(),
+          controllerVerifiedBy: session.userId,
+        },
+      })
+      : await prisma.user.create({
+        data: {
         email: `controller-${normalizedQuizNexaId.toLowerCase()}@quiznexa.local`,
         quiznexaId: normalizedQuizNexaId,
         name,
@@ -38,8 +51,9 @@ export async function POST(req: Request) {
         controllerVerifiedBy: session.userId,
         controllerRemoved: false,
       },
-    });
+      });
 
+    await prisma.controllerPermission.deleteMany({ where: { controllerId: controller.id } });
     for (const feature of DEFAULT_CONTROLLER_FEATURES) {
       await prisma.controllerPermission.create({ data: { controllerId: controller.id, feature, isGranted: true, grantedById: session.userId } });
     }

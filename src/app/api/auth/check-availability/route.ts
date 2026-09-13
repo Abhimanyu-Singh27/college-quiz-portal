@@ -30,10 +30,11 @@ export async function GET(req: Request) {
     if (requestedRole === "STAFF") {
       const activeSessions = await prisma.activeSession.findMany({
         where: { logoutAt: null, OR: [{ role: { not: "STUDENT" } }, { expiresAt: { gt: new Date() } }] },
+        include: { user: { select: { id: true, role: true, quiznexaId: true, isControllerVerified: true, controllerRemoved: true } } },
       });
       const adminCount = activeSessions.filter((session) => session.role === "ADMIN").length;
       const controllerCount = new Set(
-        activeSessions.filter((session) => session.role === "CONTROLLER").map((session) => session.userId)
+        activeSessions.filter((session) => session.role === "CONTROLLER" && session.user.role === "CONTROLLER" && session.user.isControllerVerified && !session.user.controllerRemoved).map((session) => session.userId)
       ).size;
       const adminLimit = sessionConfig.maxConcurrentAdmins;
       const controllerLimit = sessionConfig.maxConcurrentControllers;
@@ -42,6 +43,10 @@ export async function GET(req: Request) {
       const adminConfigured = await prisma.user.count({ where: { role: "ADMIN" } }) > 0;
       const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER" } });
       const activeAdmin = await prisma.activeSession.findFirst({ where: { role: "ADMIN", logoutAt: null }, select: { user: { select: { name: true } } } });
+      const activeControllerIds = activeSessions
+        .filter((session) => session.role === "CONTROLLER" && session.user.role === "CONTROLLER" && session.user.isControllerVerified && !session.user.controllerRemoved)
+        .map((session) => session.user.quiznexaId)
+        .filter((id): id is string => Boolean(id));
 
       return NextResponse.json({
         success: true,
@@ -53,6 +58,7 @@ export async function GET(req: Request) {
         controllersConfigured,
         activeAdminName: activeAdmin?.user.name || null,
         assignedControllers,
+        activeControllerIds,
       });
     }
 

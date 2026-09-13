@@ -37,6 +37,8 @@ export async function GET(req: Request) {
             name: true,
             quiznexaId: true,
             role: true,
+            isControllerVerified: true,
+            controllerRemoved: true,
           },
         },
       },
@@ -46,7 +48,7 @@ export async function GET(req: Request) {
     // Count by role
     const adminCount = activeSessions.filter((s) => s.role === "ADMIN").length;
     const controllerCount = new Set(
-      activeSessions.filter((s) => s.role === "CONTROLLER").map((s) => s.userId)
+      activeSessions.filter((s) => s.role === "CONTROLLER" && s.user.role === "CONTROLLER" && s.user.isControllerVerified && !s.user.controllerRemoved).map((s) => s.userId)
     ).size;
     const studentCount = activeSessions.filter(
       (s) => s.role === "STUDENT"
