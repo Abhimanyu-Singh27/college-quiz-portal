@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       where: { quiznexaId: normalizedQuizNexaId },
     });
 
-    if (existingUser && !existingUser.controllerRemoved) {
+    if (existingUser && existingUser.isControllerVerified && !existingUser.controllerRemoved) {
       return NextResponse.json({ error: "QuizNexa ID already registered" }, { status: 409 });
     }
 

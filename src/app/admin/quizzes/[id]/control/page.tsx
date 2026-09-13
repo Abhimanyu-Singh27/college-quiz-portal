@@ -58,7 +58,39 @@ export default function QuizControlPage({ params }: { params: Promise<{ id: stri
   const executeControl = async (action: string, extra: Record<string, string> = {}) => {
     setBusy(true);
     actionInFlight.current = true;
-    try { const response = await fetch(`/api/admin/quizzes/${quizId}/control`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Unable to apply control"); setMessage(action === "pause" ? "Quiz paused successfully." : action === "resume" ? "Quiz resumed successfully." : action === "stop" ? "Quiz stopped successfully." : "Participant action completed successfully."); if (["pause", "resume", "stop"].includes(action) && data.id) { setQuiz(current => current ? { ...current, runtimeStatus: data.runtimeStatus, isActive: data.isActive } : current); } else { const updated = await fetch(`/api/admin/quizzes/${quizId}/control?sync=${Date.now()}`, { cache: "no-store" }); if (updated.ok) setQuiz(await updated.json()); } } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to apply control"); } finally { actionInFlight.current = false; setBusy(false); }
+    try {
+      const submit = (approvalRequestId?: string) => fetch(`/api/admin/quizzes/${quizId}/control`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra, approvalRequestId }) });
+      let response = await submit();
+      let data = await response.json();
+      if (response.status === 202 && data.requestId) {
+        setMessage("This controller action was sent to the administrator for approval.");
+        await new Promise<void>((resolve, reject) => {
+          const timer = window.setInterval(async () => {
+            try {
+              const approvalResponse = await fetch(`/api/controller/approvals/${data.requestId}`, { cache: "no-store" });
+              if (!approvalResponse.ok) return;
+              const approval = await approvalResponse.json();
+              if (approval.status === "REJECTED") {
+                window.clearInterval(timer);
+                reject(new Error("The administrator rejected this controller action."));
+              } else if (approval.status === "APPROVED") {
+                window.clearInterval(timer);
+                resolve();
+              }
+            } catch {
+              window.clearInterval(timer);
+              reject(new Error("Unable to check controller approval status."));
+            }
+          }, 2000);
+        });
+        response = await submit(data.requestId);
+        data = await response.json();
+      }
+      if (!response.ok) throw new Error(data.error || "Unable to apply control");
+      setMessage(action === "pause" ? "Quiz paused successfully." : action === "resume" ? "Quiz resumed successfully." : action === "stop" ? "Quiz stopped successfully." : "Participant action completed successfully.");
+      if (["pause", "resume", "stop"].includes(action) && data.id) setQuiz(current => current ? { ...current, runtimeStatus: data.runtimeStatus, isActive: data.isActive } : current);
+      else { const updated = await fetch(`/api/admin/quizzes/${quizId}/control?sync=${Date.now()}`, { cache: "no-store" }); if (updated.ok) setQuiz(await updated.json()); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to apply control"); } finally { actionInFlight.current = false; setBusy(false); }
   };
   if (!quiz) return <main className="p-8">Loading quiz controls...</main>;
   const liveParticipants = ["STOPPED", "COMPLETED"].includes(quiz.runtimeStatus)

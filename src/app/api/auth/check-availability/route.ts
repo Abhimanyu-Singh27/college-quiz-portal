@@ -43,11 +43,6 @@ export async function GET(req: Request) {
       const adminConfigured = await prisma.user.count({ where: { role: "ADMIN" } }) > 0;
       const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER" } });
       const activeAdmin = await prisma.activeSession.findFirst({ where: { role: "ADMIN", logoutAt: null }, select: { user: { select: { name: true } } } });
-      const activeControllerIds = activeSessions
-        .filter((session) => session.role === "CONTROLLER" && session.user.role === "CONTROLLER" && session.user.isControllerVerified && !session.user.controllerRemoved)
-        .map((session) => session.user.quiznexaId)
-        .filter((id): id is string => Boolean(id));
-
       return NextResponse.json({
         success: true,
         admin: { currentCount: adminCount, maxLimit: adminLimit, isAvailable: true },
@@ -58,7 +53,6 @@ export async function GET(req: Request) {
         controllersConfigured,
         activeAdminName: activeAdmin?.user.name || null,
         assignedControllers,
-        activeControllerIds,
       });
     }
 

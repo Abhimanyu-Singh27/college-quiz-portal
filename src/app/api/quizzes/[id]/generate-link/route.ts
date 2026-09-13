@@ -20,7 +20,7 @@ export async function POST(
     const { id: quizId } = await params;
 
     const body = await req.json();
-    const { maxStudents } = body;
+    const { maxStudents, approvalRequestId } = body;
 
     // Verify quiz exists and user has access
     const quiz = await prisma.quiz.findUnique({
@@ -39,7 +39,7 @@ export async function POST(
     if (!(await hasControllerFeature(session, "MANAGE_LINKS", quizId))) {
       return NextResponse.json({ error: "Link management is not granted by an admin" }, { status: 403 });
     }
-    const approval = await requestControllerApproval(session, "GENERATE_LINK", { maxStudents, quizId });
+    const approval = await requestControllerApproval(session, "GENERATE_LINK", { maxStudents, quizId, approvalRequestId });
     if (!approval.approved) return NextResponse.json({ approvalRequired: true, requestId: approval.requestId, message: "Link creation was sent to the administrator for approval." }, { status: 202 });
 
     // Generate unique access token

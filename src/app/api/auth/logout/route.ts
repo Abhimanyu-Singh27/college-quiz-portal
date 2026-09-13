@@ -2,23 +2,15 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
-    const tokens = ["admin_session_token", "controller_session_token"]
-      .map((name) => cookieStore.get(name)?.value)
-      .filter((token): token is string => Boolean(token));
-
-    for (const token of tokens) {
-      const activeSession = await prisma.activeSession.findUnique({ where: { sessionToken: token }, select: { userId: true } });
-      await prisma.activeSession.updateMany({
-        where: activeSession ? { userId: activeSession.userId, logoutAt: null } : { sessionToken: token, logoutAt: null },
-        data: { logoutAt: new Date() },
-      });
-    }
-    cookieStore.delete("admin_session_token");
-    cookieStore.delete("controller_session_token");
-    cookieStore.delete("session_token");
+    const requestedRole = new URL(request.url).searchParams.get("role");
+    const role = requestedRole === "CONTROLLER" ? "CONTROLLER" : "ADMIN";
+    const cookieName = `${role.toLowerCase()}_session_token`;
+    const token = cookieStore.get(cookieName)?.value;
+    if (token) await prisma.activeSession.updateMany({ where: { sessionToken: token, role, logoutAt: null }, data: { logoutAt: new Date() } });
+    cookieStore.delete(cookieName);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("Logout error:", error);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PlatformMessage } from "@/components/PlatformMessage";
 
 type ApprovalRequest = { id: string; action: string; createdAt: string; controller: { name: string; quiznexaId: string | null } };
@@ -8,11 +8,18 @@ type ApprovalRequest = { id: string; action: string; createdAt: string; controll
 export function ControllerApprovalInbox() {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [message, setMessage] = useState("");
+  const loading = useRef(false);
   const load = async () => {
-    const response = await fetch("/api/admin/controller-approvals", { cache: "no-store" });
-    if (response.ok) setRequests(await response.json());
+    if (loading.current || document.visibilityState !== "visible") return;
+    loading.current = true;
+    try {
+      const response = await fetch("/api/admin/controller-approvals", { cache: "no-store" });
+      if (response.ok) setRequests(await response.json());
+    } finally {
+      loading.current = false;
+    }
   };
-  useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 3000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 10000); return () => window.clearInterval(timer); }, []);
   const review = async (requestId: string, approved: boolean) => {
     const response = await fetch("/api/admin/controller-approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId, approved }) });
     if (response.ok) { setRequests(current => current.filter(request => request.id !== requestId)); setMessage(approved ? "Controller action approved." : "Controller action rejected."); }

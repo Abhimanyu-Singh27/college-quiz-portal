@@ -23,7 +23,6 @@ interface StaffAvailability {
   controllersConfigured: boolean;
   activeAdminName: string | null;
   assignedControllers: number;
-  activeControllerIds: string[];
 }
 
 export default function LoginPage() {
@@ -76,8 +75,7 @@ export default function LoginPage() {
 
       // Check availability before submitting
       const selectedInfo = sessionInfo?.[role.toLowerCase() as "admin" | "controller"];
-      const hasExistingControllerSession = role === "CONTROLLER" && sessionInfo?.activeControllerIds.includes(formData.quiznexaId);
-      if (selectedInfo && !selectedInfo.isAvailable && !hasExistingControllerSession) {
+      if (selectedInfo && !selectedInfo.isAvailable) {
         setError(`No ${role.toLowerCase()} slots available. Please try again later.`);
         return;
       }
@@ -131,8 +129,8 @@ export default function LoginPage() {
   const roleHasAccess = role === "ADMIN" || (controllerTabAvailable && controllerAssigned);
   const currentSlotsAvailable = role === "ADMIN"
     ? adminIsAvailable
-    : Boolean(sessionInfo?.controller.isAvailable || sessionInfo?.activeControllerIds.some((id) => id === formData.quiznexaId));
-  const controllerDetailsAvailable = role !== "CONTROLLER" || Boolean(sessionInfo?.controller.isAvailable || sessionInfo?.activeControllerIds.some((id) => id === formData.quiznexaId));
+    : Boolean(sessionInfo?.controller.isAvailable);
+  const controllerDetailsAvailable = role !== "CONTROLLER" || currentSlotsAvailable;
 
   return (
     <div className="min-h-screen bg-[#111514] flex items-center justify-center p-4 sm:p-8">
@@ -249,12 +247,11 @@ export default function LoginPage() {
               <h3 className="text-xl font-semibold text-[#513b16]">Controller access is not open yet</h3>
               <p className="mt-2 text-sm leading-relaxed text-[#795f2d]">{sessionInfo?.activeAdminName ? `${sessionInfo.activeAdminName} has not opened Controller access yet. Please contact the administrator.` : "The administrator has not opened Controller access yet. Please contact the administrator."}</p>
             </div>
-          ) : !checkingAvailability && role === "CONTROLLER" && !currentSlotsAvailable && !formData.quiznexaId ? (
+          ) : !checkingAvailability && role === "CONTROLLER" && !currentSlotsAvailable ? (
             <div className="rounded-2xl border border-[#e5c98e] bg-[#fff8e8] p-6 text-center">
               <Sparkles className="mx-auto mb-3 h-9 w-9 text-[#b77917]" />
               <h3 className="text-xl font-semibold text-[#513b16]">The room is at capacity</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#795f2d]">All controller slots are in use. Enter your QuizNexa ID to sign in again if you already have an active controller session.</p>
-              <input type="text" value={formData.quiznexaId} onChange={(event) => setFormData({ ...formData, quiznexaId: event.target.value.toUpperCase() })} placeholder="QuizNexa ID" className="mt-4 w-full rounded-xl border border-[#d8d1c4] bg-white px-4 py-3 text-[#19211e]" />
+              <p className="mt-2 text-sm leading-relaxed text-[#795f2d]">All controller slots are currently in use. A controller must sign out before another login is allowed.</p>
               <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#8b6c2b]"><Lock className="h-4 w-4" /> Protected session</div>
             </div>
           ) : (

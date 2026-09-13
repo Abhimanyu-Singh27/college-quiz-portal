@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Navbar } from "@/components/Navbar";
+import { ControllerApprovalInbox } from "@/components/ControllerApprovalInbox";
 import Link from "next/link";
 import { Users, BookOpen, BarChart3, Plus, ArrowRight, AlertCircle } from "lucide-react";
 
@@ -42,6 +43,8 @@ export default async function AdminDashboard() {
           <p className="text-slate-600">Welcome back, {session.name}. Manage your portal here.</p>
           <p className="mt-1 text-sm font-medium text-amber-700">Your QuizNexa ID: {session.quiznexaId || "Not assigned"}</p>
         </div>
+
+        <ControllerApprovalInbox />
 
         {/* Verification is shown only when a controller attempts sign-in. */}
 

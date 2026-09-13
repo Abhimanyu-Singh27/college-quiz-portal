@@ -128,6 +128,13 @@ export async function POST(req: Request) {
       }
 
       if (role === "CONTROLLER") {
+        const existingControllerSession = await prisma.activeSession.findFirst({ where: { userId: user.id, role: "CONTROLLER", logoutAt: null }, select: { id: true } });
+        if (existingControllerSession) {
+          return NextResponse.json({
+            error: "This Controller is already logged in. Sign out from the current session before logging in again.",
+            status: "CONTROLLER_ALREADY_ACTIVE",
+          }, { status: 409 });
+        }
         const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER" } });
         if (assignedControllers === 0) {
           return NextResponse.json({
@@ -154,10 +161,7 @@ export async function POST(req: Request) {
 
       // Check session availability
       const availability = await checkSessionAvailability(role);
-      const existingControllerSession = role === "CONTROLLER"
-        ? await prisma.activeSession.findFirst({ where: { userId: user.id, role: "CONTROLLER", logoutAt: null }, select: { id: true } })
-        : null;
-      if (!availability.isAvailable && role !== "ADMIN" && !existingControllerSession) {
+      if (!availability.isAvailable && role !== "ADMIN") {
         return NextResponse.json({
           error: `Maximum ${role.toLowerCase()} sessions (${availability.maxLimit}) already in use. Please try again later.`,
           status: "SESSION_LIMIT_EXCEEDED",

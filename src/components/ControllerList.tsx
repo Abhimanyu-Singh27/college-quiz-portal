@@ -38,7 +38,7 @@ export function ControllerList({ initialControllers }: { initialControllers: Con
     setBusyAction(`approval:${controller.id}`);
     const response = await fetch(`/api/admin/controllers/${controller.id}/approval`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ required: !controller.controllerApprovalRequired }) });
     if (response.ok) setControllers(current => current.map(item => item.id === controller.id ? { ...item, controllerApprovalRequired: !controller.controllerApprovalRequired } : item));
-    else setMessage("Unable to update controller approval mode.");
+    else { const data = await response.json().catch(() => ({})); setMessage(data.error || "Unable to update controller approval mode."); }
     setBusyAction("");
   };
 

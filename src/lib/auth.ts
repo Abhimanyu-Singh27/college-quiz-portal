@@ -75,6 +75,11 @@ export async function getSessionToken(): Promise<string | undefined> {
   return cookieStore.get(await getSessionCookieName())?.value;
 }
 
+async function getRoleSessionToken(role: "ADMIN" | "CONTROLLER"): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get(`${role.toLowerCase()}_session_token`)?.value;
+}
+
 async function getSessionCookieName(): Promise<string> {
   const requestHeaders = await headers();
   const referer = requestHeaders.get("referer") || "";
@@ -182,7 +187,7 @@ export async function requireController(): Promise<SessionPayload> {
 
   if (session.role === "CONTROLLER") {
     const controller = await prisma.user.findFirst({ where: { id: session.userId, role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false }, select: { id: true } });
-    const token = await getSessionToken();
+    const token = await getRoleSessionToken("CONTROLLER");
     const activeSession = token ? await prisma.activeSession.findFirst({ where: { sessionToken: token, userId: session.userId, role: "CONTROLLER", logoutAt: null }, select: { id: true } }) : null;
     if (!controller || !activeSession) redirect("/");
   }
