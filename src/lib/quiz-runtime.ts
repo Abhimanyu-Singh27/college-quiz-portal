@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
-export async function stopQuizWhenExpired(quiz: { id: string; createdAt: Date; durationMinutes: number; runtimeStatus: string }) {
+export async function stopQuizWhenExpired(quiz: { id: string; createdAt: Date; runtimeStartedAt?: Date | null; durationMinutes: number; runtimeStatus: string }) {
   if (quiz.runtimeStatus !== "RUNNING") return false;
-  const expiresAt = quiz.createdAt.getTime() + quiz.durationMinutes * 60 * 1000;
+  const startedAt = quiz.runtimeStartedAt || quiz.createdAt;
+  const expiresAt = startedAt.getTime() + quiz.durationMinutes * 60 * 1000;
   if (Date.now() < expiresAt) return false;
 
   const result = await prisma.$transaction(async (transaction) => {

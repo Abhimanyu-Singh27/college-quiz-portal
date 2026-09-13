@@ -37,6 +37,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!(await hasControllerFeature(session, feature, quizId))) return NextResponse.json({ error: `${feature === "CONTROL_QUIZ" ? "Quiz control" : "Participant management"} is not granted by an admin` }, { status: 403 });
 
     if (["pause", "resume", "stop"].includes(action)) {
+      if (action === "resume" && quiz.runtimeStatus === "STOPPED") {
+        return NextResponse.json({ error: "Stopped quizzes are finished and cannot be resumed" }, { status: 409 });
+      }
       const status = action === "pause" ? "PAUSED" : action === "resume" ? "RUNNING" : "STOPPED";
       const previous = { runtimeStatus: quiz.runtimeStatus, isActive: quiz.isActive, stoppedAt: quiz.stoppedAt, stoppedById: quiz.stoppedById };
       const updated = await prisma.$transaction(async (transaction) => {

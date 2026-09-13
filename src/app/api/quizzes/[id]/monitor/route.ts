@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const quiz = await prisma.quiz.findUnique({
       where: { id: quizId },
       select: {
-        id: true, title: true, runtimeStatus: true, durationMinutes: true,
+        id: true, title: true, runtimeStatus: true, runtimeStartedAt: true, durationMinutes: true,
         createdAt: true,
         totalQuestions: true, quizType: true, presentationMode: true,
         createdById: true,

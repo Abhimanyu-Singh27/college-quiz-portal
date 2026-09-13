@@ -8,8 +8,9 @@ export async function POST() {
     // Clear the browser session first so logout still succeeds if the database is temporarily unavailable.
     await clearSessionCookie();
     if (token) {
+      const activeSession = await prisma.activeSession.findUnique({ where: { sessionToken: token }, select: { userId: true } });
       await prisma.activeSession.updateMany({
-        where: { sessionToken: token, logoutAt: null },
+        where: activeSession ? { userId: activeSession.userId, logoutAt: null } : { sessionToken: token, logoutAt: null },
         data: { logoutAt: new Date() },
       });
     }

@@ -19,7 +19,7 @@ export function PortalRefreshButton() {
       disabled={refreshing}
       aria-label="Refresh portal data"
       title="Refresh portal data"
-      className="fixed right-4 top-4 z-50 rounded-lg border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-60"
+      className="fixed right-4 top-4 z-50 hidden rounded-lg border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-60 lg:block"
     >
       <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
     </button>

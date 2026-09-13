@@ -49,7 +49,10 @@ export function StaffSidebar({ role, user }: { role: "ADMIN" | "CONTROLLER"; use
       <button type="button" onClick={() => setAccountOpen((open) => !open)} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-white/10" aria-expanded={accountOpen}><UserCircle className="text-[#63d1ba]" size={22} /><span className="min-w-0"><span className="block truncate text-sm font-semibold text-white">{user.name}</span><span className="block text-xs text-slate-400">Account portal</span></span></button>
     </div>
   </aside>
-  <button type="button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} className="fixed left-4 top-4 z-50 rounded-lg bg-[#172a2d] p-3 text-white shadow-lg lg:hidden"><Menu size={20} /></button>
+  <div className="fixed left-3 top-3 z-50 flex items-center gap-2 rounded-xl bg-white/95 p-1.5 pr-3 shadow-lg lg:hidden">
+    <button type="button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={menuOpen} className="rounded-lg bg-[#172a2d] p-2.5 text-white"><Menu size={20} /></button>
+    <span className="text-base font-semibold tracking-tight text-[#172a2d]">QuizNexa</span>
+  </div>
   {menuOpen && <div className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
   <aside className={`fixed inset-y-0 left-0 z-40 flex w-[min(21rem,88vw)] flex-col bg-[#172a2d] text-white shadow-2xl transition-transform duration-200 lg:hidden ${menuOpen ? "translate-x-0" : "-translate-x-full"}`} aria-label="Portal navigation">
     <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e5a83b] text-[#172a2d]"><CircleGauge size={20} /></span><span className="text-lg font-semibold tracking-tight">QuizNexa</span><button type="button" onClick={() => setMenuOpen(false)} className="ml-auto text-slate-400 hover:text-white" aria-label="Close navigation menu"><X size={20} /></button></div>

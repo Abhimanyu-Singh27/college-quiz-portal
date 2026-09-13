@@ -30,9 +30,9 @@ export default async function AdminPage() {
               <tr>
                 <th className="px-6 py-3">Name</th>
                 <th className="px-6 py-3">QuizNexa ID</th>
-                <th className="px-6 py-3">Department</th>
+                <th className="hidden px-6 py-3 md:table-cell">Department</th>
                 <th className="px-6 py-3">Current Role</th>
-                <th className="px-6 py-3 text-right">Assign Authority</th>
+                <th className="hidden px-6 py-3 text-right md:table-cell">Assign Authority</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -40,7 +40,7 @@ export default async function AdminPage() {
                 <tr key={u.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4 font-medium text-slate-900">{u.name}</td>
                   <td className="px-6 py-4">{u.quiznexaId || "Not assigned"}</td>
-                  <td className="px-6 py-4">{u.department}</td>
+                  <td className="hidden px-6 py-4 md:table-cell">{u.department}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                       u.role === "ADMIN" ? "bg-amber-100 text-amber-800" :
@@ -49,7 +49,7 @@ export default async function AdminPage() {
                       {u.role === "CONTROLLER" && !u.isControllerVerified ? "Ex CONTROLLER" : u.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right space-x-2">
+                  <td className="hidden px-6 py-4 text-right space-x-2 md:table-cell">
                     {u.role !== "ADMIN" && (
                       <form action="/api/admin/users" method="POST" className="inline-block">
                         <input type="hidden" name="targetUserId" value={u.id} />

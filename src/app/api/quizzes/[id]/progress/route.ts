@@ -43,6 +43,7 @@ export async function GET(
             totalQuestions: true,
             resultsDisplayInterval: true,
             runtimeStatus: true,
+            runtimeStartedAt: true,
             createdAt: true,
             durationMinutes: true,
           },
