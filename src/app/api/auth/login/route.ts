@@ -114,6 +114,12 @@ export async function POST(req: Request) {
 
       // Check controller verification status
       if (role === "CONTROLLER" && !user.isControllerVerified) {
+        if (user.controllerRemoved) {
+          return NextResponse.json({
+            error: "An administrator removed your Controller access. You cannot log in with this account.",
+            status: "CONTROLLER_REMOVED",
+          }, { status: 403 });
+        }
         return NextResponse.json({
           error: "Your controller account is pending verification by an admin. Please wait for approval.",
           status: "PENDING_VERIFICATION",

@@ -36,6 +36,7 @@ export async function POST(req: Request) {
         isControllerVerified: true,
         controllerVerifiedAt: new Date(),
         controllerVerifiedBy: session.userId,
+        controllerRemoved: false,
       },
     });
 

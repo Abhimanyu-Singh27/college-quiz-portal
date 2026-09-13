@@ -59,6 +59,7 @@ model User {
   
   // Controller verification
   isControllerVerified Boolean      @default(false)
+  controllerRemoved   Boolean       @default(false)
   controllerApprovalRequired Boolean @default(true)
   controllerVerifiedAt DateTime?
   controllerVerifiedBy String?

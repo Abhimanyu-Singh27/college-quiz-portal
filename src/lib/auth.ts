@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "super-strong-jwt-secret-key-32-chars-minimum"
@@ -177,6 +178,13 @@ export async function requireController(): Promise<SessionPayload> {
   
   if (!session || (session.role !== "CONTROLLER" && session.role !== "ADMIN")) {
     redirect("/");
+  }
+
+  if (session.role === "CONTROLLER") {
+    const controller = await prisma.user.findFirst({ where: { id: session.userId, role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false }, select: { id: true } });
+    const token = await getSessionToken();
+    const activeSession = token ? await prisma.activeSession.findFirst({ where: { sessionToken: token, userId: session.userId, role: "CONTROLLER", logoutAt: null }, select: { id: true } }) : null;
+    if (!controller || !activeSession) redirect("/");
   }
 
   // Both ADMIN and CONTROLLER can access controller features

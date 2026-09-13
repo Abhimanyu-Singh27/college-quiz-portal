@@ -100,6 +100,12 @@ export default async function AdminDashboard() {
           >
             Configure Sign-in Capacity
           </Link>
+          <Link
+            href="/admin/controllers"
+            className="bg-white border border-emerald-200 text-emerald-700 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-emerald-50 transition"
+          >
+            Manage Controller Approval
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

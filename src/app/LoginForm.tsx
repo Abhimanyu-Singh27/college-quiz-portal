@@ -124,7 +124,8 @@ export default function LoginPage() {
   const showRoleTabs = true;
   const controllerTabAvailable = true;
   const controllerAssigned = Boolean(sessionInfo?.assignedControllers);
-  const adminIsAvailable = true;
+  const adminIsAvailable = !adminIsActive;
+  const adminCreateAvailable = !adminIsActive;
   const roleHasAccess = role === "ADMIN" || (controllerTabAvailable && controllerAssigned);
   const currentSlotsAvailable = role === "ADMIN"
     ? adminIsAvailable
@@ -154,10 +155,10 @@ export default function LoginPage() {
             </div>
           )}
 
-          {role === "ADMIN" && adminIsAvailable && (
+          {role === "ADMIN" && (
             <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-[#ebe7df] p-1">
               <button type="button" onClick={() => { setAdminMode("LOGIN"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${adminMode === "LOGIN" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Sign in</button>
-              <button type="button" onClick={() => { setAdminMode("CREATE"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${adminMode === "CREATE" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Create account</button>
+              <button type="button" disabled={!adminCreateAvailable} onClick={() => { setAdminMode("CREATE"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${adminMode === "CREATE" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Create account</button>
             </div>
           )}
 
@@ -165,6 +166,10 @@ export default function LoginPage() {
             {role === "ADMIN" && adminMode === "CREATE" ? "Create administrator account" : role === "ADMIN" ? "Administrator access" : "Controller access"}
           </h2>
           <p className="text-[#68736c] text-sm mb-6">{adminMode === "CREATE" && role === "ADMIN" ? "Choose credentials for a new administrator." : "Enter your account details to continue."}</p>
+
+          {role === "ADMIN" && adminMode === "CREATE" && !adminCreateAvailable && (
+            <div className="rounded-xl border border-[#edc0b8] bg-[#fff0ed] p-3 mb-6 text-sm text-[#9d4035]">An administrator is already logged in. Sign out first before creating another administrator account.</div>
+          )}
 
           {role === "ADMIN" && sessionInfo && !sessionInfo.adminConfigured && (
             <div className="rounded-xl border border-[#b9d8c4] bg-[#edf7ef] p-3 mb-6 text-sm text-[#315d42]">
@@ -217,11 +222,17 @@ export default function LoginPage() {
           )}
 
           {/* Form */}
-          {!checkingAvailability && role === "ADMIN" && !currentSlotsAvailable ? (
+          {!checkingAvailability && role === "ADMIN" && adminMode === "LOGIN" && !currentSlotsAvailable ? (
             <div className="rounded-2xl border border-[#edc0b8] bg-[#fff0ed] p-6 text-center">
               <Lock className="mx-auto mb-3 h-9 w-9 text-[#b45345]" />
               <h3 className="text-xl font-semibold text-[#7d3028]">Administrator access is in use</h3>
               <p className="mt-2 text-sm leading-relaxed text-[#9d4035]">The current administrator must sign out before another administrator can sign in.</p>
+            </div>
+          ) : !checkingAvailability && role === "ADMIN" && adminMode === "CREATE" && !adminCreateAvailable ? (
+            <div className="rounded-2xl border border-[#edc0b8] bg-[#fff0ed] p-6 text-center">
+              <Lock className="mx-auto mb-3 h-9 w-9 text-[#b45345]" />
+              <h3 className="text-xl font-semibold text-[#7d3028]">Administrator account creation is unavailable</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#9d4035]">The current administrator must sign out before a new administrator account can be created.</p>
             </div>
           ) : !checkingAvailability && role === "CONTROLLER" && !controllerAssigned ? (
             <div className="rounded-2xl border border-[#e5c98e] bg-[#fff8e8] p-6 text-center">
