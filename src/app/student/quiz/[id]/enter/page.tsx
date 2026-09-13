@@ -1,9 +1,10 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, AlertCircle } from "lucide-react";
+import { StudentLeaveGuard } from "@/components/StudentLeaveGuard";
 
 interface Quiz {
   id: string;
@@ -16,6 +17,7 @@ interface Quiz {
 export default function StudentQuizEntryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const quizId = params.id as string;
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -24,7 +26,9 @@ export default function StudentQuizEntryPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+  const [startRequested, setStartRequested] = useState(false);
   const previousStatus = useRef<Quiz["runtimeStatus"] | null>(null);
+  const startRequestedRef = useRef(false);
 
   useEffect(() => {
     // Fetch quiz details
@@ -36,7 +40,7 @@ export default function StudentQuizEntryPage() {
         if (!response.ok) throw new Error("Quiz not found");
         const data = await response.json();
         setQuiz(data);
-        if (previousStatus.current === "PAUSED" && ["READY", "RUNNING"].includes(data.runtimeStatus)) setResumeCountdown(5);
+        if (startRequestedRef.current && previousStatus.current === "PAUSED" && ["READY", "RUNNING"].includes(data.runtimeStatus)) setResumeCountdown(5);
         if (data.runtimeStatus === "PAUSED") setResumeCountdown(null);
         previousStatus.current = data.runtimeStatus;
         const requestedMode = new URLSearchParams(window.location.search).get("mode");
@@ -73,7 +77,13 @@ export default function StudentQuizEntryPage() {
   const handleStart = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
-    if (quiz?.runtimeStatus === "PAUSED" || quiz?.runtimeStatus === "STOPPED" || (resumeCountdown !== null && resumeCountdown !== 0)) return;
+    if (quiz?.runtimeStatus === "PAUSED") {
+      startRequestedRef.current = true;
+      setStartRequested(true);
+      setError("Quiz is paused by the administrator or controller. Please wait for resume.");
+      return;
+    }
+    if (quiz?.runtimeStatus === "STOPPED" || (resumeCountdown !== null && resumeCountdown !== 0)) return;
 
     if (isTeam && !teamName.trim()) {
       setError("Team name is required for team quizzes");
@@ -114,6 +124,7 @@ export default function StudentQuizEntryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center p-4">
+      <StudentLeaveGuard quizId={quizId} visitId={searchParams.get("visitId") || undefined} />
       <div className="w-full max-w-md">
         <Link href="/student/left" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8">
           <ArrowLeft className="w-4 h-4" />
@@ -219,10 +230,10 @@ export default function StudentQuizEntryPage() {
             {/* Start Button */}
             <button
               type="submit"
-              disabled={isLoading || quiz.runtimeStatus === "PAUSED" || quiz.runtimeStatus === "STOPPED" || resumeCountdown !== null}
+              disabled={isLoading || quiz.runtimeStatus === "STOPPED" || resumeCountdown !== null}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Starting Quiz..." : "Start Quiz Now"}
+              {isLoading ? "Starting Quiz..." : resumeCountdown !== null ? `Starting in ${resumeCountdown}...` : startRequested && quiz.runtimeStatus === "PAUSED" ? "Waiting for resume..." : "Start Quiz Now"}
             </button>
           </form>
         </div>

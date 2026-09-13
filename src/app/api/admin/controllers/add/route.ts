@@ -43,6 +43,13 @@ export async function POST(req: Request) {
       await prisma.controllerPermission.create({ data: { controllerId: controller.id, feature, isGranted: true, grantedById: session.userId } });
     }
 
+    const sessionConfig = await prisma.sessionConfig.findFirst();
+    if (sessionConfig) {
+      await prisma.sessionConfig.update({ where: { id: sessionConfig.id }, data: { controllersConfigured: true } });
+    } else {
+      await prisma.sessionConfig.create({ data: { controllersConfigured: true } });
+    }
+
     // Log action
     await prisma.auditLog.create({
       data: {

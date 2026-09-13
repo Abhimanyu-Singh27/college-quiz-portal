@@ -32,7 +32,9 @@ export default function JoinQuizPage({
   const [studentName, setStudentName] = useState("");
   const [runtimeStatus, setRuntimeStatus] = useState<QuizInfo["runtimeStatus"]>("READY");
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
+  const [startRequested, setStartRequested] = useState(false);
   const previousStatus = useRef<QuizInfo["runtimeStatus"] | null>(null);
+  const startRequestedRef = useRef(false);
 
   useEffect(() => {
     const validateLink = async (accessToken: string, initial = false) => {
@@ -51,7 +53,7 @@ export default function JoinQuizPage({
         const data = await response.json();
         setQuiz(data.quiz);
         setRuntimeStatus(data.quiz.runtimeStatus);
-        if (previousStatus.current === "PAUSED" && ["READY", "RUNNING"].includes(data.quiz.runtimeStatus)) setResumeCountdown(5);
+        if (startRequestedRef.current && previousStatus.current === "PAUSED" && ["READY", "RUNNING"].includes(data.quiz.runtimeStatus)) setResumeCountdown(5);
         if (data.quiz.runtimeStatus === "PAUSED") setResumeCountdown(null);
         previousStatus.current = data.quiz.runtimeStatus;
         setCanJoin(data.canJoin);
@@ -93,7 +95,13 @@ export default function JoinQuizPage({
 
   const handleJoinQuiz = async () => {
     try {
-      if (runtimeStatus === "PAUSED" || runtimeStatus === "STOPPED" || (resumeCountdown !== null && resumeCountdown !== 0)) return;
+      if (runtimeStatus === "PAUSED") {
+        startRequestedRef.current = true;
+        setStartRequested(true);
+        setError("Quiz is paused by the administrator or controller. Please wait for resume.");
+        return;
+      }
+      if (runtimeStatus === "STOPPED" || (resumeCountdown !== null && resumeCountdown !== 0)) return;
       setJoining(true);
       const { accessToken } = await params;
       const response = await fetch(
@@ -251,7 +259,7 @@ export default function JoinQuizPage({
               {/* Join Button */}
               <button
                 onClick={handleJoinQuiz}
-                disabled={joining || runtimeStatus === "PAUSED" || runtimeStatus === "STOPPED" || resumeCountdown !== null}
+                disabled={joining || runtimeStatus === "STOPPED" || resumeCountdown !== null}
                 className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {joining ? (
@@ -259,6 +267,10 @@ export default function JoinQuizPage({
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Starting Quiz...
                   </>
+                ) : resumeCountdown !== null ? (
+                  <>Starting in {resumeCountdown}...</>
+                ) : startRequested && runtimeStatus === "PAUSED" ? (
+                  <>Waiting for resume...</>
                 ) : (
                   <>
                     Start Quiz

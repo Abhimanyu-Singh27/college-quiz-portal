@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { StudentLeaveGuard } from "@/components/StudentLeaveGuard";
 import { Loader, Clock, Zap, Users, Volume2, Check, AlertCircle } from "lucide-react";
 
 interface Question {
@@ -285,6 +286,7 @@ export default function QuizAttemptPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <StudentLeaveGuard quizId={quizId} visitId={searchParams.get("visitId") || undefined} />
         <Navbar user={null} studentMode studentQuizId={quizId} studentVisitId={searchParams.get("visitId") || undefined} />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
@@ -299,6 +301,7 @@ export default function QuizAttemptPage() {
   if (!attempt || !currentQuestion || waitingForResume) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <StudentLeaveGuard quizId={quizId} visitId={searchParams.get("visitId") || undefined} />
         <Navbar user={null} studentMode studentQuizId={quizId} studentVisitId={searchParams.get("visitId") || undefined} />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="max-w-lg px-6 text-center">
@@ -316,6 +319,7 @@ export default function QuizAttemptPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <StudentLeaveGuard quizId={quizId} visitId={searchParams.get("visitId") || undefined} />
       {showResults && progress && (
         <div className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-slate-950/90 p-6 text-white">
           <div className="w-full max-w-2xl text-center">

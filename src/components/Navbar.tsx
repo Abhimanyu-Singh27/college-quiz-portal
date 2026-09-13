@@ -25,6 +25,7 @@ export function Navbar({ user, studentMode = false, studentQuizId, studentVisitI
       if (studentQuizId) {
         await fetch(`/api/quizzes/${studentQuizId}/leave`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitId: studentVisitId }) });
       }
+      await fetch("/api/auth/student-logout", { method: "POST" });
       window.location.replace("/student/left");
     } catch (error) {
       console.error("Leave quiz failed:", error);

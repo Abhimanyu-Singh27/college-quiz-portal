@@ -130,10 +130,11 @@ export async function POST(req: Request) {
         }
         const config = await prisma.sessionConfig.findFirst();
         if (!config?.controllersConfigured) {
-          return NextResponse.json({
-            error: "Controller access has not been configured by the administrator yet.",
-            status: "CONTROLLER_ACCESS_NOT_CONFIGURED",
-          }, { status: 403 });
+          if (config) {
+            await prisma.sessionConfig.update({ where: { id: config.id }, data: { controllersConfigured: true } });
+          } else {
+            await prisma.sessionConfig.create({ data: { controllersConfigured: true } });
+          }
         }
         const activeAdmin = await prisma.activeSession.count({ where: { role: "ADMIN", logoutAt: null } });
         if (activeAdmin === 0) {
