@@ -47,10 +47,7 @@ export default function ControllerPage() {
   };
 
   const handleCreate = async () => {
-    const res = await fetch("/api/quizzes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const payload = {
         title,
         durationMinutes: duration,
         maxViolations,
@@ -58,8 +55,35 @@ export default function ControllerPage() {
         presentationMode,
         allowIndividualInTeam,
         questions,
-      }),
+    };
+    const submit = (body: Record<string, unknown>) => fetch("/api/quizzes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
+    let res = await submit(payload);
+
+    if (res.status === 202) {
+      const pending = await res.json();
+      setMessageTone("success");
+      setMessage("Quiz submitted for administrator approval.");
+      const approvalTimer = window.setInterval(async () => {
+        const approvalResponse = await fetch(`/api/controller/approvals/${pending.requestId}`, { cache: "no-store" });
+        if (!approvalResponse.ok) return;
+        const approval = await approvalResponse.json();
+        if (approval.status === "APPROVED") {
+          window.clearInterval(approvalTimer);
+          res = await submit({ ...payload, approvalRequestId: pending.requestId });
+          if (res.ok) router.push("/controller/dashboard?message=Quiz%20created%20successfully.");
+          else setMessage("Administrator approved the quiz, but it could not be published.");
+        } else if (approval.status === "REJECTED") {
+          window.clearInterval(approvalTimer);
+          setMessageTone("error");
+          setMessage("The administrator rejected this quiz action.");
+        }
+      }, 2000);
+      return;
+    }
 
     if (res.ok) {
       setMessageTone("success");

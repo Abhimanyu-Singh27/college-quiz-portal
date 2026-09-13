@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasControllerFeature } from "@/lib/controller-permissions";
+import { requestControllerApproval } from "@/lib/controller-approval";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -11,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     where: { id },
     select: {
       id: true, title: true, runtimeStatus: true, isActive: true, quizType: true,
-      visits: { select: { id: true, name: true, status: true, joinedAt: true }, orderBy: { joinedAt: "asc" } },
+      visits: { select: { id: true, userId: true, name: true, status: true, joinedAt: true }, orderBy: { joinedAt: "asc" } },
       teams: { include: { members: { include: { user: { select: { id: true, name: true, email: true } } } }, attempts: true } },
       attempts: { include: { user: { select: { id: true, name: true, email: true } }, team: { select: { id: true, name: true } } }, orderBy: { score: "desc" } },
     },
@@ -35,6 +36,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const participantAction = ["remove_attempt", "remove_team", "remove_member", "add_team", "add_member"].includes(action);
     const feature = participantAction ? "MANAGE_PARTICIPANTS" : "CONTROL_QUIZ";
     if (!(await hasControllerFeature(session, feature, quizId))) return NextResponse.json({ error: `${feature === "CONTROL_QUIZ" ? "Quiz control" : "Participant management"} is not granted by an admin` }, { status: 403 });
+    const approval = await requestControllerApproval(session, `CONTROL_${action.toUpperCase()}`, { ...body, quizId });
+    if (!approval.approved) return NextResponse.json({ approvalRequired: true, requestId: approval.requestId, message: "This action was sent to the administrator for approval." }, { status: 202 });
 
     if (["pause", "resume", "stop"].includes(action)) {
       if (action === "resume" && quiz.runtimeStatus === "STOPPED") {

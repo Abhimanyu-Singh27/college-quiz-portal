@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import { hasControllerFeature } from "@/lib/controller-permissions";
 import QRCode from "qrcode";
 import { stopQuizWhenExpired } from "@/lib/quiz-runtime";
+import { requestControllerApproval } from "@/lib/controller-approval";
 
 /**
  * Generate access link and QR code for a quiz
@@ -38,6 +39,8 @@ export async function POST(
     if (!(await hasControllerFeature(session, "MANAGE_LINKS", quizId))) {
       return NextResponse.json({ error: "Link management is not granted by an admin" }, { status: 403 });
     }
+    const approval = await requestControllerApproval(session, "GENERATE_LINK", { maxStudents, quizId });
+    if (!approval.approved) return NextResponse.json({ approvalRequired: true, requestId: approval.requestId, message: "Link creation was sent to the administrator for approval." }, { status: 202 });
 
     // Generate unique access token
     const accessToken = randomBytes(32).toString("hex");
@@ -123,7 +126,6 @@ export async function GET(
     if (!(await hasControllerFeature(session, "MANAGE_LINKS", quizId))) {
       return NextResponse.json({ error: "Link management is not granted by an admin" }, { status: 403 });
     }
-
     // Get all active links
     const links = await prisma.quizLink.findMany({
       where: {
@@ -158,6 +160,8 @@ export async function DELETE(
     if (!(await hasControllerFeature(session, "MANAGE_LINKS", quizId))) {
       return NextResponse.json({ error: "Link management is not granted by an admin" }, { status: 403 });
     }
+    const approval = await requestControllerApproval(session, "DELETE_LINK", { linkId, quizId });
+    if (!approval.approved) return NextResponse.json({ approvalRequired: true, requestId: approval.requestId, message: "Link deletion was sent to the administrator for approval." }, { status: 202 });
 
     await prisma.quizLink.update({ where: { id: linkId }, data: { isActive: false } });
     return NextResponse.json({ success: true });

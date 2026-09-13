@@ -36,15 +36,7 @@ export default function LoginPage() {
   const [sessionInfo, setSessionInfo] = useState<StaffAvailability | null>(null);
 
   useEffect(() => {
-    const currentTabRole = sessionStorage.getItem("quiznexa_tab_role");
-    if (currentTabRole === "ADMIN") {
-      router.replace("/admin/dashboard");
-      return;
-    }
-    if (currentTabRole === "CONTROLLER") {
-      router.replace("/controller/dashboard");
-      return;
-    }
+    sessionStorage.removeItem("quiznexa_tab_role");
 
     const checkAvailability = async () => {
       setCheckingAvailability(true);

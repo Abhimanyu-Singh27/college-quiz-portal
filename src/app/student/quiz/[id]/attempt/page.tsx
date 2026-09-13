@@ -95,7 +95,14 @@ export default function QuizAttemptPage() {
           return;
         }
         if (!startResponse.ok) {
-          if (data.status === "PAUSED" || data.status === "STOPPED") setWaitingForResume(true);
+          if (data.status === "PAUSED") {
+            setWaitingForResume(true);
+            setQuizReady(false);
+            setResumeCountdown(null);
+            setError("Quiz Paused");
+          } else if (data.status === "STOPPED") {
+            setWaitingForResume(true);
+          }
           throw new Error(data.error || "Failed to start quiz");
         }
         const attemptData = data;
@@ -307,10 +314,10 @@ export default function QuizAttemptPage() {
           <div className="max-w-lg px-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <p className="text-slate-600">
-              {waitingForTeam ? `${teamMembersJoined} of ${teamSize} team members have joined. Waiting for the remaining members to start the quiz.` : runtimeStatus === "STOPPED" || runtimeStatus === "COMPLETED" ? "This quiz has been stopped. You can no longer continue." : waitingForResume && quizReady ? `The quiz has resumed. Starting in ${resumeCountdown ?? 5} seconds...` : error || "Quiz not found"}
+              {waitingForTeam ? `${teamMembersJoined} of ${teamSize} team members have joined. Waiting for the remaining members to start the quiz.` : runtimeStatus === "PAUSED" ? "Quiz Paused" : runtimeStatus === "STOPPED" || runtimeStatus === "COMPLETED" ? "This quiz has been stopped. You can no longer continue." : waitingForResume && resumeCountdown !== null ? `Quiz is resuming. Starting quiz in ${resumeCountdown} seconds...` : error || "Quiz not found"}
             </p>
             {waitingForTeam && <div className="mx-auto mt-6 h-3 w-full max-w-sm overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${teamSize ? (teamMembersJoined / teamSize) * 100 : 0}%` }} /></div>}
-            {waitingForResume && runtimeStatus === "PAUSED" && <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">The quiz is paused. Waiting for the administrator or controller to resume it.</p>}
+            {waitingForResume && runtimeStatus === "PAUSED" && <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">The quiz is paused. Your current question and answers will remain unchanged.</p>}
           </div>
         </div>
       </div>

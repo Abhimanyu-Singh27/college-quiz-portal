@@ -59,6 +59,7 @@ model User {
   
   // Controller verification
   isControllerVerified Boolean      @default(false)
+  controllerApprovalRequired Boolean @default(true)
   controllerVerifiedAt DateTime?
   controllerVerifiedBy String?
   
@@ -84,6 +85,8 @@ model User {
   auditLogs         AuditLog[]
   ratings           ControllerRating[]
   controllerPermissions ControllerPermission[] @relation("ControllerPermissions")
+  controllerApprovalRequests ControllerApprovalRequest[] @relation("ControllerApprovalRequester")
+  reviewedApprovalRequests ControllerApprovalRequest[] @relation("ControllerApprovalReviewer")
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
@@ -302,6 +305,21 @@ model ControllerPermission {
 
   @@unique([controllerId, quizId, feature])
   @@index([controllerId, quizId])
+}
+
+model ControllerApprovalRequest {
+  id           String   @id @default(cuid())
+  controllerId String
+  controller   User     @relation("ControllerApprovalRequester", fields: [controllerId], references: [id], onDelete: Cascade)
+  reviewedById String?
+  reviewedBy   User?    @relation("ControllerApprovalReviewer", fields: [reviewedById], references: [id])
+  action       String
+  payload      String
+  status       String   @default("PENDING")
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([controllerId, status])
 }
 
 // Session configuration and management

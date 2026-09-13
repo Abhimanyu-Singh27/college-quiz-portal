@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hasControllerFeature } from "@/lib/controller-permissions";
+import { requestControllerApproval } from "@/lib/controller-approval";
 
 export async function GET() {
   const session = await getSession();
@@ -43,6 +44,9 @@ export async function POST(req: Request) {
   })) {
     return NextResponse.json({ error: "Complete each question, all four options, and the correct answer" }, { status: 400 });
   }
+
+  const approval = await requestControllerApproval(session, "CREATE_QUIZ", body as Record<string, unknown>);
+  if (!approval.approved) return NextResponse.json({ approvalRequired: true, requestId: approval.requestId, message: "Quiz creation was sent to the administrator for approval." }, { status: 202 });
 
   const quiz = await prisma.quiz.create({
     data: {

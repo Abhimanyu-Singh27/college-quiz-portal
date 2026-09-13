@@ -6,7 +6,7 @@ import { useState } from "react";
 import { PlatformMessage } from "@/components/PlatformMessage";
 
 type Activity = { id: string; action: string; details: string; timestamp: string; targetId?: string | null; undoData?: string | null; undoneAt?: string | null; quizExists?: boolean };
-type Controller = { id: string; name: string; quiznexaId: string | null; createdAt: string; createdQuizzes: { id: string }[]; assignedTasks: { id: string; status: string }[]; completedTasks: number; averageRating: number; activity: Activity[] };
+type Controller = { id: string; name: string; quiznexaId: string | null; controllerApprovalRequired: boolean; createdAt: string; createdQuizzes: { id: string }[]; assignedTasks: { id: string; status: string }[]; completedTasks: number; averageRating: number; activity: Activity[] };
 
 export function ControllerList({ initialControllers }: { initialControllers: Controller[] }) {
   const [controllers, setControllers] = useState(initialControllers);
@@ -34,6 +34,14 @@ export function ControllerList({ initialControllers }: { initialControllers: Con
     setBusyAction("");
   };
 
+  const toggleApproval = async (controller: Controller) => {
+    setBusyAction(`approval:${controller.id}`);
+    const response = await fetch(`/api/admin/controllers/${controller.id}/approval`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ required: !controller.controllerApprovalRequired }) });
+    if (response.ok) setControllers(current => current.map(item => item.id === controller.id ? { ...item, controllerApprovalRequired: !controller.controllerApprovalRequired } : item));
+    else setMessage("Unable to update controller approval mode.");
+    setBusyAction("");
+  };
+
   const undo = async (activityId: string) => {
     setBusyAction(`undo:${activityId}`);
     try {
@@ -56,7 +64,7 @@ export function ControllerList({ initialControllers }: { initialControllers: Con
     <div className="grid gap-4">{controllers.length > 0 ? controllers.map((controller) => <div key={controller.id} className="rounded-lg border border-slate-200 bg-white p-6"><div className="mb-4 flex items-start justify-between"><div><h3 className="text-lg font-bold text-slate-900">{controller.name}</h3><div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600"><span>QuizNexa ID: {controller.quiznexaId || "Not assigned"}</span><span className="flex items-center gap-1"><Calendar className="h-4 w-4" />Assigned {new Date(controller.createdAt).toLocaleDateString()}</span></div></div><div className="text-right text-sm"><p><b>{controller.createdQuizzes.length}</b> quizzes created</p><p><b>{controller.completedTasks}</b> tasks completed</p><p><b>{controller.averageRating.toFixed(1)}</b> / 5 rating</p></div></div>
       <div className="mb-4 flex items-center gap-2 border-t pt-4"><span className="text-sm font-medium">Admin rating:</span>{[1, 2, 3, 4, 5].map((value) => <button key={value} title={`${value} stars`} onClick={() => setRating((current) => ({ ...current, [controller.id]: value }))} className={value <= (rating[controller.id] || 0) ? "text-amber-500" : "text-slate-300"}><Star size={18} fill="currentColor" /></button>)}<button disabled={busyAction === `rating:${controller.id}`} onClick={() => saveRating(controller.id)} className="ml-2 rounded bg-amber-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60">{busyAction === `rating:${controller.id}` ? "Saving..." : "Save rating"}</button></div>
       {controller.activity.length > 0 && <div className="mb-4 rounded-lg bg-slate-50 p-3"><p className="mb-2 text-xs font-semibold uppercase text-slate-500">Controller activity</p>{controller.activity.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 border-b py-2 last:border-0"><p className="text-xs text-slate-600">{item.action}: {item.details}</p>{item.undoData && !item.undoneAt && item.quizExists !== false && (!item.action.startsWith("QUIZ_") || currentQuizActivities.has(item.id)) && <button disabled={busyAction === `undo:${item.id}`} onClick={() => undo(item.id)} className="shrink-0 rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 disabled:opacity-60">{busyAction === `undo:${item.id}` ? "Undoing..." : "Undo"}</button>}{item.undoneAt && <span className="shrink-0 text-xs text-slate-400">Undone</span>}</div>)}</div>}
-      <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4"><Link href={`/admin/controllers/${controller.id}`} className="flex-1 rounded bg-blue-50 py-2 text-center font-medium text-blue-700">View details</Link><Link href={`/admin/controllers/${controller.id}/tasks`} className="flex-1 rounded bg-indigo-50 py-2 text-center font-medium text-indigo-700">Assign tasks</Link><Link href={`/admin/controllers/${controller.id}/permissions`} className="flex-1 rounded bg-emerald-50 py-2 text-center font-medium text-emerald-700">Feature access</Link><button onClick={() => setPendingRemoval(controller)} className="flex-1 rounded bg-red-50 py-2 font-medium text-red-700">Remove</button></div>
+      <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4"><Link href={`/admin/controllers/${controller.id}`} className="flex-1 rounded bg-blue-50 py-2 text-center font-medium text-blue-700">View details</Link><Link href={`/admin/controllers/${controller.id}/tasks`} className="flex-1 rounded bg-indigo-50 py-2 text-center font-medium text-indigo-700">Assign tasks</Link><button disabled={busyAction === `approval:${controller.id}`} onClick={() => void toggleApproval(controller)} className={`flex-1 rounded py-2 font-medium text-white disabled:opacity-60 ${controller.controllerApprovalRequired ? "bg-emerald-600" : "bg-red-600"}`}>{busyAction === `approval:${controller.id}` ? "Saving..." : controller.controllerApprovalRequired ? "Approval" : "Free"}</button><button onClick={() => setPendingRemoval(controller)} className="flex-1 rounded bg-red-50 py-2 font-medium text-red-700">Remove</button></div>
     </div>) : <div className="rounded-lg border-2 border-dashed border-slate-300 p-12 text-center"><p className="text-slate-600">No controllers found.</p></div>}</div>
   </>;
 }

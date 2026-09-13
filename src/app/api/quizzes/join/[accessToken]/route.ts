@@ -157,10 +157,11 @@ export async function POST(
     const existingAttempt = await prisma.quizAttempt.findFirst({ where: { quizId: quizLink.quizId, userId: session.userId } });
     if (existingAttempt) return NextResponse.json({ error: "You have already joined this quiz" }, { status: 409 });
 
-    const visit = await prisma.quizVisit.create({ data: { quizId: quizLink.quizId, userId: session.userId, name: session.name, email: session.email } });
+    const existingVisit = await prisma.quizVisit.findFirst({ where: { quizId: quizLink.quizId, userId: session.userId }, orderBy: { joinedAt: "asc" } });
+    const visit = existingVisit || await prisma.quizVisit.create({ data: { quizId: quizLink.quizId, userId: session.userId, name: session.name, email: session.email } });
 
     // Check limits
-    if (quizLink.maxStudents && quizLink.currentStudents >= quizLink.maxStudents) {
+    if (!existingVisit && quizLink.maxStudents && quizLink.currentStudents >= quizLink.maxStudents) {
       return NextResponse.json(
         { error: "Quiz is full" },
         { status: 403 }
@@ -168,12 +169,9 @@ export async function POST(
     }
 
     // Increment student count
-    await prisma.quizLink.update({
-      where: { id: quizLink.id },
-      data: {
-        currentStudents: { increment: 1 },
-      },
-    });
+    if (!existingVisit) {
+      await prisma.quizLink.update({ where: { id: quizLink.id }, data: { currentStudents: { increment: 1 } } });
+    }
 
     // Redirect to quiz entry page
     return NextResponse.json({

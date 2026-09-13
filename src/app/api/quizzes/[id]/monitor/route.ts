@@ -99,7 +99,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       status: visit.status,
       joinedAt: visit.joinedAt,
     }));
-    const earlyLeaves = quiz.visits.filter((visit) => visit.status === "LEFT_EARLY" && (attemptForVisit(visit)?.questionsAnswered || 0) > 0 && !attemptForVisit(visit)?.submittedAt).map((visit) => {
+    const earlyLeaves = quiz.visits.filter((visit, index, visits) => visit.status === "LEFT_EARLY" && (attemptForVisit(visit)?.questionsAnswered || 0) > 0 && !attemptForVisit(visit)?.submittedAt && (!visit.userId || visits.filter((candidate) => candidate.status === "LEFT_EARLY" && candidate.userId === visit.userId).findIndex((candidate) => candidate.id === visit.id) === 0)).map((visit) => {
       const attempt = attemptForVisit(visit);
       const answered = attempt?.questionsAnswered || 0;
       return {
@@ -113,7 +113,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         rank: attempt ? rankByAttemptId.get(attempt.id) || null : null,
         leftAt: visit.leftAt || visit.joinedAt,
       };
-    }).concat(quiz.attempts.filter((attempt) => attempt.questionsAnswered > 0 && !attempt.submittedAt && !activeAttemptIds.has(attempt.id)).map((attempt) => ({
+    }).concat(quiz.attempts.filter((attempt) => attempt.questionsAnswered > 0 && !attempt.submittedAt && !attemptHasCurrentVisit(attempt)).map((attempt) => ({
       id: attempt.id,
       name: attempt.team?.name || attempt.user?.name || "Unknown",
       email: attempt.user?.email || null,

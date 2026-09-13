@@ -95,6 +95,10 @@ export default function JoinQuizPage({
 
   const handleJoinQuiz = async () => {
     try {
+      if (!studentName.trim()) {
+        setError("Student name is required");
+        return;
+      }
       if (runtimeStatus === "PAUSED") {
         startRequestedRef.current = true;
         setStartRequested(true);
@@ -160,13 +164,14 @@ export default function JoinQuizPage({
                   Cannot Join Quiz
                 </h2>
                 <p className="text-red-700 mb-6">{error}</p>
-                <Link
-                  href="/student/quizzes"
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = `${window.location.pathname}${window.location.search}`; }}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition"
                 >
-                  Leave quiz
+                  Go back
                   <ArrowRight className="w-4 h-4" />
-                </Link>
+                </button>
               </div>
             </div>
           </div>
