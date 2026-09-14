@@ -5,9 +5,9 @@ import { QuizDeleteButton } from "@/components/QuizDeleteButton";
 import Link from "next/link";
 
 export default async function ControllerQuizzes() {
-	await requireController();
+	const session = await requireController();
 	const quizzes = await prisma.quiz.findMany({
-		where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] }, createdBy: { role: "ADMIN" } },
+		where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] }, OR: [{ createdBy: { role: "ADMIN" } }, { createdById: session.userId }] },
 		include: {
 			createdBy: { select: { name: true, role: true } },
 			_count: { select: { questions: true, attempts: true } },
