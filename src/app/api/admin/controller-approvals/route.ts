@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  const requests = await prisma.controllerApprovalRequest.findMany({ where: { status: "PENDING" }, include: { controller: { select: { name: true, quiznexaId: true } } }, orderBy: { createdAt: "asc" } });
+  const requests = await prisma.controllerApprovalRequest.findMany({ where: { OR: [{ status: "PENDING" }, { status: { in: ["APPROVED", "REJECTED", "CONSUMED"] } }] }, include: { controller: { select: { name: true, quiznexaId: true } } }, orderBy: { createdAt: "desc" }, take: 25 });
   return NextResponse.json(requests);
 }
 
