@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       data: {
         actorId: session.userId,
         action: "CONTROLLER_CREATED",
-        details: `Created controller: ${controller.name} (${controller.quiznexaId})`,
+                    controllerApprovalRequired: false,
       },
     });
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Add controller error:", error);
+                  controllerApprovalRequired: false,
     if (error instanceof Error && error.message.includes("Redirect")) {
       throw error; // Re-throw redirect errors
     }

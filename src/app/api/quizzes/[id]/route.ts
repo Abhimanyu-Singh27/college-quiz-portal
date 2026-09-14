@@ -48,6 +48,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       await tx.quizAttempt.deleteMany({ where: { quizId: id } });
       await tx.teamMember.deleteMany({ where: { teamId: { in: teamIds } } });
       await tx.team.deleteMany({ where: { quizId: id } });
+      await tx.task.deleteMany({ where: { relatedQuizId: id } });
+      await tx.controllerPermission.deleteMany({ where: { quizId: id } });
+      await tx.controllerApprovalRequest.deleteMany({ where: { payload: { contains: id } } });
       await tx.quizLink.deleteMany({ where: { quizId: id } });
       await tx.question.deleteMany({ where: { quizId: id } });
       await tx.quiz.delete({ where: { id } });
