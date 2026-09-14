@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { BarChart3, CheckCircle2, Users, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 export default async function AdminAnalytics() {
-  await requireAdmin();
+  const session = await requireAdmin();
   const [quizzes, participants, submitted, topScores] = await Promise.all([
-    prisma.quiz.findMany({ select: { title: true, _count: { select: { attempts: true } } }, orderBy: { createdAt: "desc" }, take: 8 }),
-    prisma.quizAttempt.count({ where: { isRemoved: false } }),
-    prisma.quizAttempt.count({ where: { submittedAt: { not: null }, isRemoved: false } }),
-    prisma.quizAttempt.findMany({ where: { submittedAt: { not: null }, isRemoved: false }, orderBy: { score: "desc" }, take: 5, select: { score: true, user: { select: { name: true } }, team: { select: { name: true } } } }),
+    prisma.quiz.findMany({ where: adminQuizScope(session.userId), select: { title: true, _count: { select: { attempts: true } } }, orderBy: { createdAt: "desc" }, take: 8 }),
+    prisma.quizAttempt.count({ where: { isRemoved: false, quiz: adminQuizScope(session.userId) } }),
+    prisma.quizAttempt.count({ where: { submittedAt: { not: null }, isRemoved: false, quiz: adminQuizScope(session.userId) } }),
+    prisma.quizAttempt.findMany({ where: { submittedAt: { not: null }, isRemoved: false, quiz: adminQuizScope(session.userId) }, orderBy: { score: "desc" }, take: 5, select: { score: true, user: { select: { name: true } }, team: { select: { name: true } } } }),
   ]);
   const maxAttempts = Math.max(...quizzes.map(quiz => quiz._count.attempts), 1);
   const metrics: Array<[string, string | number, LucideIcon]> = [["Quizzes", quizzes.length, BarChart3], ["Participants", participants, Users], ["Submitted", submitted, CheckCircle2], ["Completion", participants ? `${Math.round(submitted / participants * 100)}%` : "0%", Trophy]];

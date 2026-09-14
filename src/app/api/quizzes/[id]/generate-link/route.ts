@@ -6,6 +6,7 @@ import { hasControllerFeature } from "@/lib/controller-permissions";
 import QRCode from "qrcode";
 import { stopQuizWhenExpired } from "@/lib/quiz-runtime";
 import { requestControllerApproval } from "@/lib/controller-approval";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 /**
  * Generate access link and QR code for a quiz
@@ -23,8 +24,8 @@ export async function POST(
     const { maxStudents, approvalRequestId } = body;
 
     // Verify quiz exists and user has access
-    const quiz = await prisma.quiz.findUnique({
-      where: { id: quizId },
+    const quiz = await prisma.quiz.findFirst({
+      where: session.role === "ADMIN" ? { AND: [{ id: quizId }, adminQuizScope(session.userId)] } : { id: quizId },
     });
 
     if (!quiz) {
@@ -110,8 +111,8 @@ export async function GET(
     const { id: quizId } = await params;
 
     // Verify quiz exists and user has access
-    const quiz = await prisma.quiz.findUnique({
-      where: { id: quizId },
+    const quiz = await prisma.quiz.findFirst({
+      where: session.role === "ADMIN" ? { AND: [{ id: quizId }, adminQuizScope(session.userId)] } : { id: quizId },
     });
 
     if (!quiz) {
@@ -157,6 +158,9 @@ export async function DELETE(
     if (!linkId) return NextResponse.json({ error: "Link ID is required" }, { status: 400 });
     const link = await prisma.quizLink.findFirst({ where: { id: linkId, quizId, isActive: true } });
     if (!link) return NextResponse.json({ error: "Active link not found" }, { status: 404 });
+    if (session.role === "ADMIN" && !(await prisma.quiz.findFirst({ where: { AND: [{ id: quizId }, adminQuizScope(session.userId)] }, select: { id: true } }))) {
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    }
     if (!(await hasControllerFeature(session, "MANAGE_LINKS", quizId))) {
       return NextResponse.json({ error: "Link management is not granted by an admin" }, { status: 403 });
     }

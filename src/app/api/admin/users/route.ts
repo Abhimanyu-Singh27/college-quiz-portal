@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import type { Role } from "@prisma/client";
+import { adminControllerScope } from "@/lib/admin-scope";
 
 export async function GET() {
   const session = await getSession();
@@ -10,6 +11,7 @@ export async function GET() {
   }
 
   const users = await prisma.user.findMany({
+    where: { OR: [{ id: session.userId }, adminControllerScope(session.userId)] },
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, quiznexaId: true, role: true, department: true },
   });
@@ -27,6 +29,8 @@ export async function POST(req: Request) {
   const targetUserId = formData.get("targetUserId") as string;
   const newRole = formData.get("newRole") as string;
 
+  const targetUser = await prisma.user.findFirst({ where: { id: targetUserId, ...adminControllerScope(session.userId) }, select: { id: true } });
+  if (!targetUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
   const updatedUser = await prisma.user.update({
     where: { id: targetUserId },
     data: { role: newRole as Role },

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasControllerFeature } from "@/lib/controller-permissions";
 import { stopQuizWhenExpired } from "@/lib/quiz-runtime";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 function parseQuestionOptions(value: string): string[] {
   try {
@@ -21,8 +22,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   try {
     const { id: quizId } = await params;
-    const quiz = await prisma.quiz.findUnique({
-      where: { id: quizId },
+    const quiz = await prisma.quiz.findFirst({
+      where: session.role === "ADMIN" ? { AND: [{ id: quizId }, adminQuizScope(session.userId)] } : { id: quizId },
       select: {
         id: true, title: true, runtimeStatus: true, updatedAt: true, durationMinutes: true,
         createdAt: true,

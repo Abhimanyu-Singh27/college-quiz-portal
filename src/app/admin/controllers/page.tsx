@@ -4,12 +4,13 @@ import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ControllerList } from "@/components/ControllerList";
+import { adminControllerScope } from "@/lib/admin-scope";
 
 export default async function AdminControllers() {
   const session = await requireAdmin();
 
   const controllers = await prisma.user.findMany({
-    where: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false },
+    where: { ...adminControllerScope(session.userId), isControllerVerified: true, controllerRemoved: false },
     select: {
       id: true,
       name: true,

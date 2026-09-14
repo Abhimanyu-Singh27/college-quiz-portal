@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -36,7 +37,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!session || (session.role !== "ADMIN" && session.role !== "CONTROLLER")) return NextResponse.json({ error: "Staff access required" }, { status: 403 });
   try {
     const { id } = await params;
-    const quiz = await prisma.quiz.findUnique({ where: { id }, select: { title: true, createdById: true } });
+    const quiz = await prisma.quiz.findFirst({ where: session.role === "ADMIN" ? { AND: [{ id }, adminQuizScope(session.userId)] } : { id }, select: { title: true, createdById: true } });
     if (!quiz) return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     if (session.role !== "ADMIN" && quiz.createdById !== session.userId) return NextResponse.json({ error: "You cannot delete this quiz" }, { status: 403 });
     await prisma.$transaction(async (tx) => {

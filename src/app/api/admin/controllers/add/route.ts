@@ -46,6 +46,7 @@ export async function POST(req: Request) {
           controllerRemoved: false,
           controllerVerifiedAt: new Date(),
           controllerVerifiedBy: session.userId,
+          assignedByAdminId: session.userId,
         },
       })
       : await prisma.user.create({
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
         controllerVerifiedAt: new Date(),
         controllerVerifiedBy: session.userId,
         controllerRemoved: false,
+        assignedByAdminId: session.userId,
       },
       });
 

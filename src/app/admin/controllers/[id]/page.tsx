@@ -2,11 +2,12 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ControllerActivityPanel } from "@/components/ControllerActivityPanel";
+import { adminControllerScope } from "@/lib/admin-scope";
 
 export default async function ControllerDetails({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const { id } = await params;
-  const controller = await prisma.user.findUnique({ where: { id, role: "CONTROLLER" }, include: { createdQuizzes: { include: { _count: { select: { questions: true, attempts: true } } }, orderBy: { createdAt: "desc" } }, assignedTasks: { orderBy: { createdAt: "desc" } }, auditLogs: { select: { id: true, action: true, details: true, timestamp: true, targetId: true, undoData: true, undoneAt: true }, orderBy: { timestamp: "desc" }, take: 100 } } });
+  const controller = await prisma.user.findFirst({ where: { ...adminControllerScope(session.userId), id }, include: { createdQuizzes: { include: { _count: { select: { questions: true, attempts: true } } }, orderBy: { createdAt: "desc" } }, assignedTasks: { orderBy: { createdAt: "desc" } }, auditLogs: { select: { id: true, action: true, details: true, timestamp: true, targetId: true, undoData: true, undoneAt: true }, orderBy: { timestamp: "desc" }, take: 100 } } });
   if (!controller) return <main className="p-8">Controller not found.</main>;
   const createdCount = controller.createdQuizzes.length;
   const liveCount = controller.createdQuizzes.filter((quiz) => ["RUNNING", "PAUSED"].includes(quiz.runtimeStatus)).length;

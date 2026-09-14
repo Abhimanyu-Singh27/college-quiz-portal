@@ -5,13 +5,14 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Users, Clock } from "lucide-react";
 import { PlatformMessage } from "@/components/PlatformMessage";
 import { QuizDeleteButton } from "@/components/QuizDeleteButton";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 export default async function AdminQuizzes({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
   const session = await requireAdmin();
   const { message } = await searchParams;
 
   const quizzes = await prisma.quiz.findMany({
-    where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] } },
+    where: { AND: [adminQuizScope(session.userId), { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] } }] },
     include: {
       createdBy: { select: { name: true, role: true } },
       _count: { select: { questions: true, attempts: true } },

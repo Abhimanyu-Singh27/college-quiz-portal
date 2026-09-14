@@ -3,13 +3,14 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasControllerFeature } from "@/lib/controller-permissions";
 import { requestControllerApproval } from "@/lib/controller-approval";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || (session.role !== "ADMIN" && session.role !== "CONTROLLER")) return NextResponse.json({ error: "Staff access required" }, { status: 403 });
   const { id } = await params;
-  const quiz = await prisma.quiz.findUnique({
-    where: { id },
+  const quiz = await prisma.quiz.findFirst({
+    where: session.role === "ADMIN" ? { AND: [{ id }, adminQuizScope(session.userId)] } : { id },
     select: {
       id: true, title: true, runtimeStatus: true, isActive: true, quizType: true,
       visits: { select: { id: true, userId: true, name: true, status: true, joinedAt: true }, orderBy: { joinedAt: "asc" } },
@@ -31,7 +32,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!session || (session.role !== "ADMIN" && session.role !== "CONTROLLER")) return NextResponse.json({ error: "Staff access required" }, { status: 403 });
     const body = await req.json();
     const { action, attemptId, teamId, userId, email, teamName, teamSize } = body;
-    const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
+    const quiz = await prisma.quiz.findFirst({ where: session.role === "ADMIN" ? { AND: [{ id: quizId }, adminQuizScope(session.userId)] } : { id: quizId } });
     if (!quiz) return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     const participantAction = ["remove_attempt", "remove_team", "remove_member", "add_team", "add_member"].includes(action);
     const feature = participantAction ? "MANAGE_PARTICIPANTS" : "CONTROL_QUIZ";

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { adminControllerScope } from "@/lib/admin-scope";
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
   try {
     const { id } = await params;
-    const controller = await prisma.user.findFirst({ where: { id, role: "CONTROLLER" } });
+    const controller = await prisma.user.findFirst({ where: { ...adminControllerScope(session.userId), id } });
     if (!controller) return NextResponse.json({ error: "Controller not found" }, { status: 404 });
     await prisma.$transaction([
       prisma.user.update({ where: { id }, data: { email: `removed-${id}-${Date.now()}@quiznexa.local`, quiznexaId: null, isControllerVerified: false, controllerRemoved: true } }),

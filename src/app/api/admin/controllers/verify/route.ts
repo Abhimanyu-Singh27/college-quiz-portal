@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { adminControllerScope } from "@/lib/admin-scope";
 
 export async function GET(req: Request) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const unverifiedControllers = await prisma.user.findMany({
       where: {
-        role: "CONTROLLER",
+        ...adminControllerScope(session.userId),
         isControllerVerified: false,
         controllerRemoved: false,
       },
@@ -46,6 +47,8 @@ export async function POST(req: Request) {
 
     if (approved) {
       // Verify controller
+      const ownedController = await prisma.user.findFirst({ where: { ...adminControllerScope(session.userId), id: controllerId }, select: { id: true } });
+      if (!ownedController) return NextResponse.json({ error: "Controller not found" }, { status: 404 });
       const controller = await prisma.user.update({
         where: { id: controllerId },
         data: {

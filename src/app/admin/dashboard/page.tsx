@@ -4,19 +4,20 @@ import { Navbar } from "@/components/Navbar";
 import { ControllerApprovalInbox } from "@/components/ControllerApprovalInbox";
 import Link from "next/link";
 import { Users, BookOpen, BarChart3, Plus, ArrowRight, AlertCircle } from "lucide-react";
+import { adminControllerScope, adminQuizScope } from "@/lib/admin-scope";
 
 export default async function AdminDashboard() {
   const session = await requireAdmin();
 
   const [totalControllers, totalQuizzes, totalAttempts, unverifiedControllers] = await Promise.all([
-    prisma.user.count({ where: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false } }),
-    prisma.quiz.count(),
-    prisma.quizAttempt.count(),
-    prisma.user.count({ where: { role: "CONTROLLER", isControllerVerified: false, controllerRemoved: false } }),
+    prisma.user.count({ where: { ...adminControllerScope(session.userId), isControllerVerified: true, controllerRemoved: false } }),
+    prisma.quiz.count({ where: adminQuizScope(session.userId) }),
+    prisma.quizAttempt.count({ where: { quiz: adminQuizScope(session.userId) } }),
+    prisma.user.count({ where: { ...adminControllerScope(session.userId), isControllerVerified: false, controllerRemoved: false } }),
   ]);
 
   const controllers = await prisma.user.findMany({
-    where: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false },
+    where: { ...adminControllerScope(session.userId), isControllerVerified: true, controllerRemoved: false },
     select: { id: true, name: true, quiznexaId: true, createdAt: true },
     take: 5,
   });
@@ -28,6 +29,7 @@ export default async function AdminDashboard() {
       createdBy: { select: { name: true } },
       _count: { select: { questions: true, attempts: true } },
     },
+    where: adminQuizScope(session.userId),
     orderBy: { createdAt: "desc" },
     take: 5,
   });

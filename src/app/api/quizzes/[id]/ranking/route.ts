@@ -3,12 +3,14 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasControllerFeature } from "@/lib/controller-permissions";
 import { requestControllerApproval } from "@/lib/controller-approval";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 type Medal = { name: string; priority: number; color: string };
 
 const canManage = async (quizId: string, feature: string) => {
   const session = await getSession();
   if (!session) return null;
+  if (session.role === "ADMIN" && !(await prisma.quiz.findFirst({ where: { AND: [{ id: quizId }, adminQuizScope(session.userId)] }, select: { id: true } }))) return null;
   return (await hasControllerFeature(session, feature, quizId)) ? session : null;
 };
 

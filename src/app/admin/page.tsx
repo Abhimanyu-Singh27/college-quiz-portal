@@ -2,14 +2,16 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { adminActorScope, adminControllerScope } from "@/lib/admin-scope";
 
 export default async function AdminPage() {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/");
 
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+  const users = await prisma.user.findMany({ where: { OR: [{ id: session.userId }, adminControllerScope(session.userId)] }, orderBy: { createdAt: "desc" } });
   const auditLogs = await prisma.auditLog.findMany({
     take: 10,
+    where: adminActorScope(session.userId),
     orderBy: { timestamp: "desc" },
     include: { actor: { select: { name: true, quiznexaId: true, role: true, isControllerVerified: true } } },
   });

@@ -3,12 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hasControllerFeature } from "@/lib/controller-permissions";
 import { requestControllerApproval } from "@/lib/controller-approval";
+import { adminQuizScope } from "@/lib/admin-scope";
 
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const quizzes = await prisma.quiz.findMany({
+    where: session.role === "ADMIN" ? adminQuizScope(session.userId) : undefined,
     include: {
       createdBy: { select: { name: true, email: true } },
       _count: { select: { questions: true, attempts: true } },
