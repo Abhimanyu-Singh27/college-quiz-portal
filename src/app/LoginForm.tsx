@@ -23,6 +23,7 @@ interface StaffAvailability {
   controllersConfigured: boolean;
   activeAdminName: string | null;
   assignedControllers: number;
+  canCreateAdmin: boolean;
 }
 
 export default function LoginPage() {
@@ -120,12 +121,12 @@ export default function LoginPage() {
   };
 
   const currentRoleInfo = sessionInfo?.[role.toLowerCase() as "admin" | "controller"];
-  const adminIsActive = Boolean(sessionInfo?.admin.currentCount);
+  const adminIsActive = sessionInfo?.admin.currentCount !== 0;
   const showRoleTabs = true;
   const controllerTabAvailable = true;
   const controllerAssigned = Boolean(sessionInfo?.assignedControllers);
-  const adminIsAvailable = true;
-  const adminCreateAvailable = !adminIsActive;
+  const adminIsAvailable = sessionInfo?.admin.isAvailable ?? false;
+  const adminCreateAvailable = sessionInfo?.canCreateAdmin ?? false;
   const roleHasAccess = role === "ADMIN" || (controllerTabAvailable && controllerAssigned);
   const currentSlotsAvailable = role === "ADMIN"
     ? adminIsAvailable
@@ -159,7 +160,7 @@ export default function LoginPage() {
           {role === "ADMIN" && (
             <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-[#ebe7df] p-1">
               <button type="button" onClick={() => { setAdminMode("LOGIN"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${adminMode === "LOGIN" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Sign in</button>
-              <button type="button" disabled={!adminCreateAvailable} onClick={() => { setAdminMode("CREATE"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${adminMode === "CREATE" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Create account</button>
+              <button type="button" disabled={checkingAvailability || !adminCreateAvailable} onClick={() => { setAdminMode("CREATE"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${adminMode === "CREATE" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Create account</button>
             </div>
           )}
 

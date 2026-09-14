@@ -45,7 +45,8 @@ export async function GET(req: Request) {
       const activeAdmin = await prisma.activeSession.findFirst({ where: { role: "ADMIN", logoutAt: null }, select: { user: { select: { name: true } } } });
       return NextResponse.json({
         success: true,
-        admin: { currentCount: adminCount, maxLimit: adminLimit, isAvailable: true },
+        admin: { currentCount: adminCount, maxLimit: adminLimit, isAvailable: adminCount < adminLimit },
+        canCreateAdmin: adminCount === 0,
         controller: { currentCount: controllerCount, maxLimit: controllerLimit, isAvailable: controllerCount < controllerLimit },
         nextRole,
         allSlotsFull: !nextRole,
