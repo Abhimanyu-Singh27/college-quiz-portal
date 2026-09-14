@@ -63,7 +63,7 @@ export default async function AdminDashboard() {
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-600 text-sm font-medium mb-1">Active Quizzes</p>
+                <p className="text-slate-600 text-sm font-medium mb-1">All Quizzes</p>
                 <p className="text-3xl font-bold text-blue-700">{totalQuizzes}</p>
               </div>
               <BookOpen className="w-12 h-12 text-blue-100" />

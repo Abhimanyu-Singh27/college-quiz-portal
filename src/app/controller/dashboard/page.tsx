@@ -13,7 +13,7 @@ export default async function ControllerDashboard({ searchParams }: { searchPara
 
   // Get controller's quizzes
   const quizzes = await prisma.quiz.findMany({
-    where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] }, OR: [{ createdBy: { role: "ADMIN" } }, { createdById: session.userId }] },
+    where: { OR: [{ createdBy: { role: "ADMIN" }, runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] } }, { createdById: session.userId }] },
     include: {
       _count: { select: { questions: true, attempts: true } },
     },

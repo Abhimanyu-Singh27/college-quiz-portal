@@ -4,7 +4,6 @@ import { Navbar } from "@/components/Navbar";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ControllerList } from "@/components/ControllerList";
-import { ControllerApprovalInbox } from "@/components/ControllerApprovalInbox";
 
 export default async function AdminControllers() {
   const session = await requireAdmin();
@@ -47,8 +46,6 @@ export default async function AdminControllers() {
             + Add Controller
           </Link>
         </div>
-
-        <ControllerApprovalInbox />
 
         <ControllerList initialControllers={await Promise.all(controllers.map(async controller => { const quizIds = controller.auditLogs.filter(log => log.action.startsWith("QUIZ_") && log.targetId).map(log => log.targetId!); const existingQuizIds = new Set((await prisma.quiz.findMany({ where: { id: { in: quizIds } }, select: { id: true } })).map(quiz => quiz.id)); return { ...controller, completedTasks: controller.assignedTasks.filter(task => task.status === "COMPLETED").length, averageRating: controller.ratings.length ? controller.ratings.reduce((sum, item) => sum + item.rating, 0) / controller.ratings.length : 0, createdAt: controller.createdAt.toISOString(), activity: controller.auditLogs.map(log => ({ ...log, quizExists: !log.action.startsWith("QUIZ_") || existingQuizIds.has(log.targetId || ""), timestamp: log.timestamp.toISOString(), undoneAt: log.undoneAt?.toISOString() || null })) }; }))} />
       </main>
