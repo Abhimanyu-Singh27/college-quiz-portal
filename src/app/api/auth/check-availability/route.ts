@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     // The landing page uses one snapshot so it can show only the next available role.
     if (requestedRole === "STAFF") {
       const activeSessions = await prisma.activeSession.findMany({
-        where: { logoutAt: null, OR: [{ role: { not: "STUDENT" } }, { expiresAt: { gt: new Date() } }] },
+        where: { logoutAt: null, expiresAt: { gt: new Date() } },
         include: { user: { select: { id: true, role: true, quiznexaId: true, isControllerVerified: true, controllerRemoved: true } } },
       });
       const adminCount = activeSessions.filter((session) => session.role === "ADMIN").length;
@@ -42,11 +42,11 @@ export async function GET(req: Request) {
       const nextRole = "ADMIN";
       const adminConfigured = await prisma.user.count({ where: { role: "ADMIN" } }) > 0;
       const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER", controllerRemoved: false } });
-      const activeAdmin = await prisma.activeSession.findFirst({ where: { role: "ADMIN", logoutAt: null }, select: { user: { select: { name: true } } } });
+      const activeAdmin = await prisma.activeSession.findFirst({ where: { role: "ADMIN", logoutAt: null, expiresAt: { gt: new Date() } }, select: { user: { select: { name: true } } } });
       return NextResponse.json({
         success: true,
-        admin: { currentCount: adminCount, maxLimit: adminLimit, isAvailable: adminCount < adminLimit },
-        canCreateAdmin: adminCount === 0,
+        admin: { currentCount: adminCount, maxLimit: adminLimit, isAvailable: true },
+        canCreateAdmin: true,
         controller: { currentCount: controllerCount, maxLimit: controllerLimit, isAvailable: controllerCount < controllerLimit },
         nextRole,
         allSlotsFull: !nextRole,
@@ -62,7 +62,7 @@ export async function GET(req: Request) {
       where: {
         role,
         logoutAt: null,
-        OR: [{ role: { not: "STUDENT" } }, { expiresAt: { gt: new Date() } }],
+        expiresAt: { gt: new Date() },
       },
     });
 
@@ -76,7 +76,7 @@ export async function GET(req: Request) {
     const currentCount = role === "CONTROLLER"
       ? new Set(activeSessions.map((session) => session.userId)).size
       : activeSessions.length;
-    const isAvailable = currentCount < maxLimit;
+    const isAvailable = role === "ADMIN" || currentCount < maxLimit;
 
     return NextResponse.json({
       success: true,

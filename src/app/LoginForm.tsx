@@ -121,7 +121,7 @@ export default function LoginPage() {
   };
 
   const currentRoleInfo = sessionInfo?.[role.toLowerCase() as "admin" | "controller"];
-  const adminIsActive = sessionInfo?.admin.currentCount !== 0;
+  const adminIsActive = false;
   const showRoleTabs = true;
   const controllerTabAvailable = true;
   const controllerAssigned = Boolean(sessionInfo?.assignedControllers);
@@ -132,6 +132,29 @@ export default function LoginPage() {
     ? adminIsAvailable
     : Boolean(sessionInfo?.controller.isAvailable);
   const controllerDetailsAvailable = role !== "CONTROLLER" || currentSlotsAvailable;
+
+  const chooseCreateAccount = async () => {
+    setCheckingAvailability(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/check-availability?role=STAFF", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Unable to check administrator availability");
+        return;
+      }
+      setSessionInfo(data);
+      if (data.canCreateAdmin) {
+        setAdminMode("CREATE");
+      } else {
+        setError("An administrator is currently logged in. Sign out before creating a new account.");
+      }
+    } catch {
+      setError("Unable to check administrator availability");
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#111514] flex items-center justify-center p-4 sm:p-8">
@@ -160,7 +183,7 @@ export default function LoginPage() {
           {role === "ADMIN" && (
             <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-[#ebe7df] p-1">
               <button type="button" onClick={() => { setAdminMode("LOGIN"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${adminMode === "LOGIN" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Sign in</button>
-              <button type="button" disabled={checkingAvailability || !adminCreateAvailable} onClick={() => { setAdminMode("CREATE"); setError(""); }} className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${adminMode === "CREATE" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Create account</button>
+              <button type="button" disabled={checkingAvailability || !adminCreateAvailable} onClick={chooseCreateAccount} className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${adminMode === "CREATE" ? "bg-white text-[#19211e] shadow-sm" : "text-[#68736c]"}`}>Create account</button>
             </div>
           )}
 

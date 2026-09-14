@@ -18,11 +18,11 @@ async function checkSessionAvailability(role: "ADMIN" | "CONTROLLER" | "STUDENT"
   }
 
   // Count active sessions for this role
-  const activeSessions = await prisma.activeSession.findMany({
+      const activeSessions = await prisma.activeSession.findMany({
     where: {
       role,
       logoutAt: null,
-      OR: [{ role: { not: "STUDENT" } }, { expiresAt: { gt: new Date() } }],
+      expiresAt: { gt: new Date() },
       ...(role === "CONTROLLER" ? { user: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false } } : {}),
     },
   });
@@ -75,8 +75,6 @@ export async function POST(req: Request) {
       let user = normalizedQuizNexaId ? await prisma.user.findUnique({ where: { quiznexaId: normalizedQuizNexaId } }) : null;
 
       if (role === "ADMIN" && createAccount) {
-        const activeAdmin = await prisma.activeSession.count({ where: { role: "ADMIN", logoutAt: null } });
-        if (activeAdmin > 0) return NextResponse.json({ error: "The current administrator must sign out before another account can be created.", status: "ADMIN_ALREADY_ACTIVE" }, { status: 409 });
         if (password.length < 6) return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
         if (!name?.trim()) return NextResponse.json({ error: "Name is required when creating an administrator" }, { status: 400 });
         const generatedId = createQuizNexaId("ADMIN");
@@ -150,7 +148,7 @@ export async function POST(req: Request) {
             await prisma.sessionConfig.create({ data: { controllersConfigured: true } });
           }
         }
-        const activeAdmin = await prisma.activeSession.count({ where: { role: "ADMIN", logoutAt: null } });
+        const activeAdmin = await prisma.activeSession.count({ where: { role: "ADMIN", logoutAt: null, expiresAt: { gt: new Date() } } });
         if (activeAdmin === 0) {
           return NextResponse.json({
             error: "Controller sign-in opens after the administrator signs in.",
@@ -182,7 +180,7 @@ export async function POST(req: Request) {
       // Create active session record
       const expiresAt = role === "STUDENT"
         ? new Date(Date.now() + 12 * 60 * 60 * 1000)
-        : new Date("9999-12-31T23:59:59.999Z");
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       await prisma.activeSession.create({
         data: {

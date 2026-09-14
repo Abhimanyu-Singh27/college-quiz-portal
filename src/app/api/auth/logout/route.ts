@@ -10,9 +10,11 @@ export async function POST(request: Request) {
     const cookieName = `${role.toLowerCase()}_session_token`;
     const token = cookieStore.get(cookieName)?.value;
     if (token) {
-      const activeSession = await prisma.activeSession.findFirst({ where: { sessionToken: token, role, logoutAt: null }, select: { userId: true } });
+      const activeSession = await prisma.activeSession.findFirst({ where: { sessionToken: token, role, logoutAt: null }, select: { id: true, userId: true } });
       if (activeSession) {
         await prisma.activeSession.updateMany({ where: { userId: activeSession.userId, role, logoutAt: null }, data: { logoutAt: new Date() } });
+      } else {
+        await prisma.activeSession.updateMany({ where: { sessionToken: token, role, logoutAt: null }, data: { logoutAt: new Date() } });
       }
     }
     cookieStore.delete(cookieName);
