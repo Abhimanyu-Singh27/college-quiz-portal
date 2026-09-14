@@ -10,7 +10,7 @@ export default async function AdminControllers() {
   const session = await requireAdmin();
 
   const controllers = await prisma.user.findMany({
-    where: { role: "CONTROLLER", isControllerVerified: true },
+    where: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false },
     select: {
       id: true,
       name: true,

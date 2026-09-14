@@ -7,7 +7,7 @@ import Link from "next/link";
 export default async function ControllerQuizzes() {
 	await requireController();
 	const quizzes = await prisma.quiz.findMany({
-		where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] }, OR: [{ createdBy: { role: "ADMIN" } }, { createdBy: { role: "CONTROLLER" } }] },
+		where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] }, createdBy: { role: "ADMIN" } },
 		include: {
 			createdBy: { select: { name: true, role: true } },
 			_count: { select: { questions: true, attempts: true } },

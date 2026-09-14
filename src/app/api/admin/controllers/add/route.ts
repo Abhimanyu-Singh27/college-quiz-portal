@@ -16,12 +16,22 @@ export async function POST(req: Request) {
     }
 
     const normalizedQuizNexaId = String(quiznexaId).trim().toUpperCase();
-    const existingUser = await prisma.user.findUnique({
+    let existingUser = await prisma.user.findUnique({
       where: { quiznexaId: normalizedQuizNexaId },
     });
 
     if (existingUser && existingUser.isControllerVerified && !existingUser.controllerRemoved) {
       return NextResponse.json({ error: "QuizNexa ID already registered" }, { status: 409 });
+    }
+
+    // A removed controller must never be reactivated, because that would restore
+    // the previous controller's tasks, ratings, permissions, and audit history.
+    if (existingUser?.controllerRemoved) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: { email: `removed-${existingUser.id}-${Date.now()}@quiznexa.local`, quiznexaId: null },
+      });
+      existingUser = null;
     }
 
     const controller = existingUser
@@ -70,7 +80,7 @@ export async function POST(req: Request) {
       data: {
         actorId: session.userId,
         action: "CONTROLLER_CREATED",
-                    controllerApprovalRequired: false,
+        details: `Created controller: ${name} (${normalizedQuizNexaId})`,
       },
     });
 
@@ -86,7 +96,6 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
-                  controllerApprovalRequired: false,
     if (error instanceof Error && error.message.includes("Redirect")) {
       throw error; // Re-throw redirect errors
     }

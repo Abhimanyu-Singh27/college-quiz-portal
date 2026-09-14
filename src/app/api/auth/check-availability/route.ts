@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       const controllersConfigured = sessionConfig.controllersConfigured;
       const nextRole = "ADMIN";
       const adminConfigured = await prisma.user.count({ where: { role: "ADMIN" } }) > 0;
-      const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER" } });
+      const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER", controllerRemoved: false } });
       const activeAdmin = await prisma.activeSession.findFirst({ where: { role: "ADMIN", logoutAt: null }, select: { user: { select: { name: true } } } });
       return NextResponse.json({
         success: true,

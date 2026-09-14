@@ -10,6 +10,7 @@ export async function GET(req: Request) {
       where: {
         role: "CONTROLLER",
         isControllerVerified: false,
+        controllerRemoved: false,
       },
       select: {
         id: true,

@@ -13,7 +13,7 @@ export default async function ControllerDashboard({ searchParams }: { searchPara
 
   // Get controller's quizzes
   const quizzes = await prisma.quiz.findMany({
-    where: { OR: [{ createdById: session.userId }, { createdBy: { role: "ADMIN" } }] },
+    where: { runtimeStatus: { in: ["READY", "RUNNING", "PAUSED"] }, createdBy: { role: "ADMIN" } },
     include: {
       _count: { select: { questions: true, attempts: true } },
     },
@@ -94,10 +94,10 @@ export default async function ControllerDashboard({ searchParams }: { searchPara
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* My Quizzes */}
+          {/* Live Admin Quizzes */}
           <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4">
-              <h2 className="text-lg font-bold text-white">My Quizzes</h2>
+              <h2 className="text-lg font-bold text-white">Live Admin Quizzes</h2>
             </div>
             <div className="p-6">
               {quizzes.length > 0 ? (
@@ -152,7 +152,7 @@ export default async function ControllerDashboard({ searchParams }: { searchPara
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-slate-500 py-6">No quizzes created yet</p>
+                <p className="text-center text-slate-500 py-6">No live admin quizzes available</p>
               )}
               <Link
                 href="/controller/quizzes"

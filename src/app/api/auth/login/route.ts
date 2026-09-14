@@ -135,7 +135,7 @@ export async function POST(req: Request) {
             status: "CONTROLLER_ALREADY_ACTIVE",
           }, { status: 409 });
         }
-        const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER" } });
+        const assignedControllers = await prisma.user.count({ where: { role: "CONTROLLER", controllerRemoved: false } });
         if (assignedControllers === 0) {
           return NextResponse.json({
             error: "The administrator has not assigned any Controller yet. Please contact the administrator.",

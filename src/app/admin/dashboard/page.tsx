@@ -9,14 +9,14 @@ export default async function AdminDashboard() {
   const session = await requireAdmin();
 
   const [totalControllers, totalQuizzes, totalAttempts, unverifiedControllers] = await Promise.all([
-    prisma.user.count({ where: { role: "CONTROLLER", isControllerVerified: true } }),
+    prisma.user.count({ where: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false } }),
     prisma.quiz.count(),
     prisma.quizAttempt.count(),
-    prisma.user.count({ where: { role: "CONTROLLER", isControllerVerified: false } }),
+    prisma.user.count({ where: { role: "CONTROLLER", isControllerVerified: false, controllerRemoved: false } }),
   ]);
 
   const controllers = await prisma.user.findMany({
-    where: { role: "CONTROLLER", isControllerVerified: true },
+    where: { role: "CONTROLLER", isControllerVerified: true, controllerRemoved: false },
     select: { id: true, name: true, quiznexaId: true, createdAt: true },
     take: 5,
   });
